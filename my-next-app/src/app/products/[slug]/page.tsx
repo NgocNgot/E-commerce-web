@@ -19,7 +19,7 @@ export default function ProductDetail() {
   const params = useParams();
   const slug = params?.slug as string | undefined;
   const [product, setProduct] = useState<Product | null>(null);
-  const { cart, addToCart } = useCart();
+  // const { cart, addToCart } = useCart();
   const [promotions, setPromotions] = useState<PromotionResponse | null>(null);
   const [amountOffProducts, setAmountOffProducts] = useState<AmountOffProductResponse | null>(null);
 
