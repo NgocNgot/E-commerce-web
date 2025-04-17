@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "payments",
+  "info": {
+    "singularName": "payment",
+    "pluralName": "payments",
+    "displayName": "Payment",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "paymentIntentId": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "decimal"
+    },
+    "currency": {
+      "type": "enumeration",
+      "enum": [
+        "USD",
+        "VND"
+      ]
+    },
+    "statusPayment": {
+      "type": "enumeration",
+      "enum": [
+        "Succeeded",
+        "Failed",
+        "Pending"
+      ]
+    },
+    "users_permissions_user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "payment"
+    },
+    "order": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::order.order",
+      "inversedBy": "payment"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "kind": "collectionType",
+  "collectionName": "amount_off_orders",
+  "info": {
+    "singularName": "amount-off-order",
+    "pluralName": "amount-off-orders",
+    "displayName": "AmountOffOrder",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "discountType": {
+      "type": "enumeration",
+      "enum": [
+        "percentage",
+        "fixedAmount"
+      ]
+    },
+    "discountValue": {
+      "type": "decimal"
+    },
+    "recurringType": {
+      "type": "enumeration",
+      "enum": [
+        "weekly",
+        "monthly"
+      ]
+    },
+    "recurringDays": {
+      "type": "integer",
+      "default": 1
+    },
+    "percentage": {
+      "type": "integer",
+      "default": 0
+    },
+    "promotion": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::promotion.promotion",
+      "inversedBy": "amount_off_order"
+    }
+  }
+}

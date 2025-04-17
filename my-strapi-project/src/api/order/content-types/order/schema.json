@@ -1,0 +1,65 @@
+{
+  "kind": "collectionType",
+  "collectionName": "orders",
+  "info": {
+    "singularName": "order",
+    "pluralName": "orders",
+    "displayName": "Order",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "users_permissions_user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "checkouts"
+    },
+    "totalPrice": {
+      "type": "decimal"
+    },
+    "name": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "statusCheckout": {
+      "type": "enumeration",
+      "enum": [
+        "Pending",
+        "Completed",
+        "Cancelled"
+      ]
+    },
+    "lineItems": {
+      "type": "json"
+    },
+    "payment": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::payment.payment",
+      "mappedBy": "order"
+    },
+    "email": {
+      "type": "string"
+    },
+    "shippingCost": {
+      "type": "decimal"
+    },
+    "shipping": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::shipping.shipping",
+      "inversedBy": "orders"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "kind": "collectionType",
+  "collectionName": "product_organizations",
+  "info": {
+    "singularName": "product-organization",
+    "pluralName": "product-organizations",
+    "displayName": "Product Organization"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "type": {
+      "type": "string"
+    },
+    "vendor": {
+      "type": "string"
+    }
+  }
+}

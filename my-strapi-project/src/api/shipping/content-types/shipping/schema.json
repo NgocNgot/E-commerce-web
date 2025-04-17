@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "shippings",
+  "info": {
+    "singularName": "shipping",
+    "pluralName": "shippings",
+    "displayName": "Shipping",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "nameShippingMethod": {
+      "type": "string"
+    },
+    "shippingMethodId": {
+      "type": "string"
+    },
+    "descriptionShippingMethod": {
+      "type": "blocks"
+    },
+    "shipping_rates": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::shipping-rate.shipping-rate",
+      "mappedBy": "shipping"
+    },
+    "orders": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::order.order",
+      "mappedBy": "shipping"
+    }
+  }
+}

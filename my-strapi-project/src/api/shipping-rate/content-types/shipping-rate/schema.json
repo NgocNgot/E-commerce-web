@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "shipping_rates",
+  "info": {
+    "singularName": "shipping-rate",
+    "pluralName": "shipping-rates",
+    "displayName": "ShippingRate"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "minWeight": {
+      "type": "decimal"
+    },
+    "maxWeight": {
+      "type": "decimal"
+    },
+    "minVolume": {
+      "type": "decimal"
+    },
+    "maxVolume": {
+      "type": "decimal"
+    },
+    "flatRate": {
+      "type": "decimal"
+    },
+    "pricePerWeight": {
+      "type": "decimal"
+    },
+    "pricePerVolume": {
+      "type": "decimal"
+    },
+    "shipping": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::shipping.shipping",
+      "inversedBy": "shipping_rates"
+    }
+  }
+}

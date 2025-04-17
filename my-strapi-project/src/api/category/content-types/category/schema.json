@@ -1,0 +1,54 @@
+{
+  "kind": "collectionType",
+  "collectionName": "categories",
+  "info": {
+    "singularName": "category",
+    "pluralName": "categories",
+    "displayName": "Category",
+    "description": "Organize your content into categories"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "uid"
+    },
+    "description": {
+      "type": "text"
+    },
+    "media": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "products": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::product.product",
+      "mappedBy": "categories"
+    },
+    "amount_off_products": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::amount-off-product.amount-off-product",
+      "mappedBy": "applies_to_categories"
+    },
+    "buy_x_get_ies": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::buy-x-get-y.buy-x-get-y",
+      "mappedBy": "applies_to_categories"
+    }
+  }
+}

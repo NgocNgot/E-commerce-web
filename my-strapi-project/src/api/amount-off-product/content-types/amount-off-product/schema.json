@@ -1,0 +1,47 @@
+{
+  "kind": "collectionType",
+  "collectionName": "amount_off_products",
+  "info": {
+    "singularName": "amount-off-product",
+    "pluralName": "amount-off-products",
+    "displayName": "AmountOffProduct",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "discountType": {
+      "type": "enumeration",
+      "enum": [
+        "percentage",
+        "fixedAmount"
+      ]
+    },
+    "discountValue": {
+      "type": "decimal"
+    },
+    "applies_to_products": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::product.product",
+      "inversedBy": "amount_off_products"
+    },
+    "applies_to_categories": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::category.category",
+      "inversedBy": "amount_off_products"
+    },
+    "percentage": {
+      "type": "integer",
+      "default": 0
+    },
+    "promotion": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::promotion.promotion",
+      "inversedBy": "amount_off_products"
+    }
+  }
+}

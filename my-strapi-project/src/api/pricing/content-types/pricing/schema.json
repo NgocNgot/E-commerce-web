@@ -1,0 +1,34 @@
+{
+  "kind": "collectionType",
+  "collectionName": "pricings",
+  "info": {
+    "singularName": "pricing",
+    "pluralName": "pricings",
+    "displayName": "Pricing"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "price": {
+      "type": "decimal",
+      "required": true
+    },
+    "compareAtPrice": {
+      "type": "decimal"
+    },
+    "chargeTax": {
+      "type": "boolean",
+      "default": false
+    },
+    "costPerItem": {
+      "type": "decimal"
+    },
+    "products": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::product.product",
+      "mappedBy": "pricing"
+    }
+  }
+}

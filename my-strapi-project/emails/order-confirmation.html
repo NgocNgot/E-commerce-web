@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác nhận đơn hàng #{{orderId}}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        h1,
+        h2 {
+            color: #007bff;
+        }
+
+        .order-info p {
+            margin: 5px 0;
+        }
+
+        .item-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .item-table th,
+        .item-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .item-table th {
+            background-color: #f2f2f2;
+        }
+
+        .total {
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #777;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Thank you for your order!</h1>
+        <p>Dear {{customerName}},</p>
+        <p>Your order has been confirmed on {{orderDate}}.</p>
+
+        <h2>Order Details</h2>
+        {{orderItems}}
+        <p class="total"><strong>Shipping Cost:</strong> {{shippingCost}}</p>
+        <p class="total"><strong>Total Amount:</strong> {{totalAmount}}</p>
+
+        <h2>Shipping Information</h2>
+        <p><strong>Recipient Name:</strong> {{name}}</p>
+        <p><strong>Address:</strong> {{shippingAddress}}</p>
+        <p><strong>Phone Number:</strong> {{phoneNumber}}</p>
+
+        <div class="footer">
+            <p>If you have any questions, please contact us.</p>
+            <p>Sincerely,</p>
+            <p>Liceria Beauty Skincare</p>
+        </div>
+    </div>
+</body>
+
+</html>

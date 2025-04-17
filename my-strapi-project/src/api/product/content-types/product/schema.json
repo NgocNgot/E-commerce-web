@@ -1,0 +1,96 @@
+{
+  "kind": "collectionType",
+  "collectionName": "products",
+  "info": {
+    "singularName": "product",
+    "pluralName": "products",
+    "displayName": "Product",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "media": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title"
+    },
+    "blocks": {
+      "type": "dynamiczone",
+      "components": [
+        "shared.seo",
+        "shared.rich-text",
+        "shared.media"
+      ]
+    },
+    "categories": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::category.category",
+      "inversedBy": "products"
+    },
+    "pricing": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::pricing.pricing",
+      "inversedBy": "products"
+    },
+    "inventory": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::inventory.inventory"
+    },
+    "product_organization": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::product-organization.product-organization"
+    },
+    "carts": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::cart.cart",
+      "inversedBy": "products"
+    },
+    "weight": {
+      "type": "decimal"
+    },
+    "length": {
+      "type": "decimal"
+    },
+    "width": {
+      "type": "decimal"
+    },
+    "height": {
+      "type": "decimal"
+    },
+    "amount_off_products": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::amount-off-product.amount-off-product",
+      "mappedBy": "applies_to_products"
+    },
+    "buy_x_get_y": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::buy-x-get-y.buy-x-get-y",
+      "inversedBy": "get_product"
+    }
+  }
+}

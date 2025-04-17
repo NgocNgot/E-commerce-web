@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "buy_x_get_ies",
+  "info": {
+    "singularName": "buy-x-get-y",
+    "pluralName": "buy-x-get-ies",
+    "displayName": "BuyXGetY",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "buyQuantity": {
+      "type": "integer"
+    },
+    "getQuantity": {
+      "type": "integer"
+    },
+    "get_product": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::product.product",
+      "mappedBy": "buy_x_get_y"
+    },
+    "applies_to_categories": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::category.category",
+      "inversedBy": "buy_x_get_ies"
+    },
+    "promotion": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::promotion.promotion",
+      "inversedBy": "buy_x_get_y"
+    }
+  }
+}

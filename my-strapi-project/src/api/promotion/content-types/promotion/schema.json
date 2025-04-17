@@ -1,0 +1,57 @@
+{
+  "kind": "collectionType",
+  "collectionName": "promotions",
+  "info": {
+    "singularName": "promotion",
+    "pluralName": "promotions",
+    "displayName": "Promotion",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "blocks"
+    },
+    "startDate": {
+      "type": "date"
+    },
+    "endDate": {
+      "type": "date"
+    },
+    "code": {
+      "type": "string"
+    },
+    "maximumUses": {
+      "type": "integer"
+    },
+    "excludedUsers": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "promotions"
+    },
+    "amount_off_products": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::amount-off-product.amount-off-product",
+      "mappedBy": "promotion"
+    },
+    "amount_off_order": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::amount-off-order.amount-off-order",
+      "mappedBy": "promotion"
+    },
+    "buy_x_get_y": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::buy-x-get-y.buy-x-get-y",
+      "mappedBy": "promotion"
+    }
+  }
+}

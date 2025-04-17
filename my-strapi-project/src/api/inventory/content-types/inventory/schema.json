@@ -1,0 +1,29 @@
+{
+  "kind": "collectionType",
+  "collectionName": "inventories",
+  "info": {
+    "singularName": "inventory",
+    "pluralName": "inventories",
+    "displayName": "Inventory"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "trackQuantity": {
+      "type": "boolean",
+      "default": true
+    },
+    "quantity": {
+      "type": "integer"
+    },
+    "continueSelling": {
+      "type": "boolean",
+      "default": false
+    },
+    "hasSKU": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

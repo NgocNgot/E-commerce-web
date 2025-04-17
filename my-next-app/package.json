@@ -1,0 +1,40 @@
+{
+  "name": "my-next-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.13.4",
+    "@heroicons/react": "^2.2.0",
+    "@next/font": "^14.2.15",
+    "@stripe/react-stripe-js": "^3.6.0",
+    "@stripe/stripe-js": "^6.1.0",
+    "axios": "^1.8.3",
+    "framer-motion": "^12.6.2",
+    "graphql": "^16.10.0",
+    "next": "15.2.3",
+    "next-seo": "^6.6.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.5.2",
+    "react-markdown": "^10.1.0",
+    "react-stripe-checkout": "^2.6.3",
+    "reactstrap": "^9.2.3",
+    "strapi-sdk-javascript": "^0.3.3",
+    "stripe": "^17.7.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20.17.30",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/reactstrap": "^8.7.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
