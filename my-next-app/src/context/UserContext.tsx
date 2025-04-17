@@ -58,7 +58,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     const addToCart = async (productId: number, quantity: number) => {
         if (user) {
-            // Thêm sản phẩm vào giỏ hàng local
             const newCart = [...cart, { id: Date.now(), productId, quantity }];
             setCart(newCart);
             localStorage.setItem("cart", JSON.stringify(newCart));

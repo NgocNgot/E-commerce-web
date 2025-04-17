@@ -1,5 +1,5 @@
 import React from 'react';
-
+// After payment success
 const PaymentSuccessPage = () => {
     return (
         <div style={{ padding: '2rem', textAlign: 'center' }}>

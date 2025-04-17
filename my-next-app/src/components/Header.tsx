@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 const banners = [
     "http://localhost:1337/uploads/banner_1_71b4632f49.png",

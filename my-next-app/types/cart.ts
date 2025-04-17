@@ -4,6 +4,7 @@ export interface CartItem {
   title: string;
   price: number;
   image: string;
+  // Shipping need
   weight: number;
   length: number;
   width: number;

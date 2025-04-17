@@ -51,7 +51,7 @@ export default function CartPage() {
         setLoading(false);
       }
     };
-    // Feature Promotion
+
     const fetchPromotionData = async () => {
       const promotionsData = await fetchPromotions();
       setPromotions(promotionsData);

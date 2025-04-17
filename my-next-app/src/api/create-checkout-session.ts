@@ -13,15 +13,15 @@ export default async function handler(
     try {
       const { orderId, amount } = req.body;
 
-      // Create checkout session with Stripe
+      // Create session with Stripe
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
           {
             price_data: {
-              currency: "usd", // Adjust the currency
+              currency: "usd",
               product_data: {
-                name: "Order #" + orderId, // Customize product name for your order
+                name: "Order #" + orderId,
               },
               unit_amount: amount,
             },

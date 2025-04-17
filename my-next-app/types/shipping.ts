@@ -16,9 +16,8 @@ export interface ShippingMethod {
   descriptionShippingMethod: any[];
   shipping_rates: ShippingRate[];
 }
-
+// Get lineItem in CartCart
 export interface LineItem {
-  // From CartItem
   quantity: number;
   weight: number;
   length: number;
