@@ -2,7 +2,7 @@ import { factories } from "@strapi/strapi";
 import Stripe from "stripe";
 import fs from "fs";
 import path from "path";
-
+// url stripe in .envenv
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2022-11-15",
 });

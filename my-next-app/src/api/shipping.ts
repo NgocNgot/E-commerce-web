@@ -1,7 +1,7 @@
 import { ShippingMethod } from "@/../types/shipping";
 
 const API_URL = "http://localhost:1337/api";
-
+// fetch shipping methods
 export const fetchShippingMethodsApi = async (): Promise<ShippingMethod[]> => {
   try {
     const response = await fetch(`${API_URL}/shippings?populate=*`);

@@ -1,10 +1,10 @@
 "use client";
 
+const stripePromise = loadStripe("pk_test_51R91vrPbbfCp8zjVn18peJqrR2xvL2Q28PV39fa8QBqXui9u47abRheE0tWjEUff53ryeo3GBR25UyzCl1ZDSgX5007KhHxUn7");
 import { use, useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import { loadStripe } from "@stripe/stripe-js";
-const stripePromise = loadStripe("pk_test_51R91vrPbbfCp8zjVn18peJqrR2xvL2Q28PV39fa8QBqXui9u47abRheE0tWjEUff53ryeo3GBR25UyzCl1ZDSgX5007KhHxUn7");
 import { CardElement, useStripe, useElements, Elements } from "@stripe/react-stripe-js";
 import ShippingMethods from "@/app/checkout/ShippingMethods";
 import { LineItem } from "@/../types/shipping";
