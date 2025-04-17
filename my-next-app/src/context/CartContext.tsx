@@ -71,7 +71,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user?.jwt]);
 
   useEffect(() => {
-    // When user logs in and we have cart items, assign them to the user
     if (user && user.id && user.jwt && cart.length > 0) {
       const assignPromises = cart.map(item => assignCartToUserApi(item.id, user.id, user.jwt));
       Promise.all(assignPromises)

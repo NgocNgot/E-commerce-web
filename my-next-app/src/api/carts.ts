@@ -17,7 +17,6 @@ export const addToCartApi = async (
   quantity: number = 1,
   userId?: number,
   token?: string
-  // totalPrice?: number
 ): Promise<Response> => {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -29,7 +28,6 @@ export const addToCartApi = async (
     data: {
       products: [productId],
       quantity: quantity,
-      // totalPrice: totalPrice,
     },
   };
   if (userId) {
