@@ -59,6 +59,7 @@ function Checkout() {
         length: item.length || 0,
         width: item.width || 0,
         height: item.height || 0,
+        totalItemPrice: item.totalItemPrice || 0,
     }));
     const handleShippingMethodSelect = (methodId: number, cost: number) => {
         setSelectedShippingMethodId(methodId - 1);
@@ -97,7 +98,7 @@ function Checkout() {
                 body: JSON.stringify({
                     data: {
                         users_permissions_user: { id: 2 },
-                        totalPrice: (cartTotalPrice || 0) + (shippingCost || 0),
+                        totalPrice: cartTotalPrice || 0,
                         name: userInfo.name,
                         address: userInfo.address,
                         city: userInfo.city,
@@ -117,6 +118,8 @@ function Checkout() {
                             length: item.length,
                             width: item.width,
                             height: item.height,
+
+                            totalItemPrice: item.totalItemPrice,
                         })),
                     },
                 }),

@@ -73,6 +73,7 @@ function ProductPage({ product, promotions, amountOffProducts }: { product: Prod
 
     addToCart(productData);
   };
+  // Add discount price to product
   const { discountedPrice, discountPercentage } = calculateDiscountedPrice(product, promotions, amountOffProducts);
 
   return (

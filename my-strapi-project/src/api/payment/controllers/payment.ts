@@ -2,7 +2,7 @@ import { factories } from "@strapi/strapi";
 import Stripe from "stripe";
 import fs from "fs";
 import path from "path";
-// url stripe in .envenv
+// url stripe in env
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2022-11-15",
 });
@@ -102,8 +102,8 @@ export default factories.createCoreController(
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 8px;">${item.title || "Not found name Product"}</td>
                   <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
-                  <td style="border: 1px solid #ddd; padding: 8px;">${item.price} USD</td>
-                  <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity * item.price} USD</td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">${item.totalItemPrice} USD</td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity * item.totalItemPrice} USD</td>
                 </tr>
             `;
           });
