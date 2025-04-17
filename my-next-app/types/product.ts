@@ -3,11 +3,11 @@ export interface Product {
   documentId: string;
   title: string;
   slug: string;
+  // Shipping need
   weight: number;
   length: number;
   width: number;
   height: number;
-
   description?: string | { children: { text: string }[] }[];
   media: { url: string }[];
   pricing: { price: number };

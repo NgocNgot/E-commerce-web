@@ -4,7 +4,6 @@ import { Product } from "../../types/product";
 
 const BASE_URL = "http://localhost:1337";
 
-// GraphQL-get article
 const GET_PRODUCTS = gql`
   query GetProducts {
     products {
