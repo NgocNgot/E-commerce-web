@@ -21,7 +21,7 @@ export interface Promotion {
   endDate: string;
   code: string;
   maximumUses: number;
-  amount_off_products: AmountOffProduct[];
+  amount_off_products: AmountOffProduct[]; // Get interface AmountOffProduct
   amount_off_order: any[];
   buy_x_get_y: any[];
 }

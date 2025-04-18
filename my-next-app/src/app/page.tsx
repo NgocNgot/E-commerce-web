@@ -161,6 +161,7 @@ export default async function HomePage() {
                           className="object-cover w-full h-full transition-opacity duration-500 group-hover:opacity-50"
                         />
                       )}
+                      {/* Button */}
                       <button className="absolute bottom-1/3 left-1/2 transform -translate-x-1/2 bg-rose-500 text-white text-base shadow-lg px-4 py-2 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2">
                         <ShoppingCartIcon className="h-6 w-6" />
                         <span>Add to cart</span>

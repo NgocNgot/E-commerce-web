@@ -1,10 +1,10 @@
 "use client";
 
+const stripePromise = loadStripe("pk_test_51R91vrPbbfCp8zjVn18peJqrR2xvL2Q28PV39fa8QBqXui9u47abRheE0tWjEUff53ryeo3GBR25UyzCl1ZDSgX5007KhHxUn7");
 import { use, useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import { loadStripe } from "@stripe/stripe-js";
-const stripePromise = loadStripe("pk_test_51R91vrPbbfCp8zjVn18peJqrR2xvL2Q28PV39fa8QBqXui9u47abRheE0tWjEUff53ryeo3GBR25UyzCl1ZDSgX5007KhHxUn7");
 import { CardElement, useStripe, useElements, Elements } from "@stripe/react-stripe-js";
 import ShippingMethods from "@/app/checkout/ShippingMethods";
 import { LineItem } from "@/../types/shipping";
@@ -59,6 +59,7 @@ function Checkout() {
         length: item.length || 0,
         width: item.width || 0,
         height: item.height || 0,
+        totalItemPrice: item.totalItemPrice || 0,
     }));
     const handleShippingMethodSelect = (methodId: number, cost: number) => {
         setSelectedShippingMethodId(methodId - 1);
@@ -97,7 +98,7 @@ function Checkout() {
                 body: JSON.stringify({
                     data: {
                         users_permissions_user: { id: 2 },
-                        totalPrice: (cartTotalPrice || 0) + (shippingCost || 0),
+                        totalPrice: cartTotalPrice || 0,
                         name: userInfo.name,
                         address: userInfo.address,
                         city: userInfo.city,
@@ -117,6 +118,8 @@ function Checkout() {
                             length: item.length,
                             width: item.width,
                             height: item.height,
+
+                            totalItemPrice: item.totalItemPrice,
                         })),
                     },
                 }),
