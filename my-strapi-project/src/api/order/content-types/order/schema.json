@@ -60,6 +60,12 @@
       "relation": "manyToOne",
       "target": "api::shipping.shipping",
       "inversedBy": "orders"
+    },
+    "discountAmount": {
+      "type": "decimal"
+    },
+    "voucherCode": {
+      "type": "string"
     }
   }
 }

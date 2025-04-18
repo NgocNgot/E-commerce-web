@@ -750,6 +750,7 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    discountAmount: Schema.Attribute.Decimal;
     email: Schema.Attribute.String;
     lineItems: Schema.Attribute.JSON;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
@@ -772,6 +773,7 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
       'manyToOne',
       'plugin::users-permissions.user'
     >;
+    voucherCode: Schema.Attribute.String;
   };
 }
 

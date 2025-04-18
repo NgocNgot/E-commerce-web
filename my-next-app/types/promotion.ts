@@ -12,6 +12,15 @@ export interface AmountOffProduct {
   promotion?: Promotion;
 }
 
+export interface AmountOffOrder {
+  id: number;
+  documentId: string;
+  discountType: "percentage" | "fixedAmount";
+  discountValue: number | null;
+  percentage: number | null;
+  promotion?: Promotion;
+}
+
 export interface Promotion {
   id: number;
   documentId: string;
@@ -22,7 +31,7 @@ export interface Promotion {
   code: string;
   maximumUses: number;
   amount_off_products: AmountOffProduct[];
-  amount_off_order: any[];
+  amount_off_order: AmountOffOrder[]; // Get interface AmountOffOrder
   buy_x_get_y: any[];
 }
 
@@ -40,6 +49,18 @@ export interface PromotionResponse {
 
 export interface AmountOffProductResponse {
   data: AmountOffProduct[];
+  meta: {
+    pagination: {
+      page: number;
+      pageSize: number;
+      pageCount: number;
+      total: number;
+    };
+  };
+}
+
+export interface AmountOffOrderResponse {
+  data: AmountOffOrder[];
   meta: {
     pagination: {
       page: number;

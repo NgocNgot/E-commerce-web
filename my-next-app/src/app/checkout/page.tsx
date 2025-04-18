@@ -3,6 +3,8 @@
 import { use, useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTicketSimple } from '@fortawesome/free-solid-svg-icons';
 import { loadStripe } from "@stripe/stripe-js";
 const stripePromise = loadStripe("pk_test_51R91vrPbbfCp8zjVn18peJqrR2xvL2Q28PV39fa8QBqXui9u47abRheE0tWjEUff53ryeo3GBR25UyzCl1ZDSgX5007KhHxUn7");
 import { CardElement, useStripe, useElements, Elements } from "@stripe/react-stripe-js";
@@ -25,6 +27,12 @@ function Checkout() {
 
     const stripe = useStripe();
     const elements = useElements();
+    // Voucher
+    const [voucherCode, setVoucherCode] = useState<string>("");
+    const [availableVouchers, setAvailableVouchers] = useState<any[]>([]);
+    const [selectedVoucher, setSelectedVoucher] = useState<any | null>(null);
+    const [discountAmount, setDiscountAmount] = useState<number>(0);
+    const [appliedVoucherCodeDisplay, setAppliedVoucherCodeDisplay] = useState<string>("");
 
     useEffect(() => {
         const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -32,6 +40,8 @@ function Checkout() {
 
         const storedTotalPrice = JSON.parse(localStorage.getItem("cartTotalPrice") || "null");
         setCartTotalPrice(storedTotalPrice);
+        // useEffect of voucher
+        fetchAvailableVouchers();
 
     }, []);
 
@@ -45,6 +55,60 @@ function Checkout() {
         } else {
             setUserInfo({ ...userInfo, [e.target.name]: e.target.value });
         }
+    };
+
+    // Voucher methods
+    const fetchAvailableVouchers = async () => {
+        try {
+            const response = await fetch("http://localhost:1337/api/amount-off-orders?populate=promotion");
+            if (!response.ok) {
+                console.error("Failed to fetch vouchers");
+                return;
+            }
+            const data = await response.json();
+            setAvailableVouchers(data.data);
+        } catch (error) {
+            console.error("Error fetching vouchers:", error);
+        }
+    };
+
+    const handleVoucherInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setVoucherCode(e.target.value);
+    };
+
+    const handleApplyVoucher = () => {
+        const matchedVoucher = availableVouchers.find(
+            (voucher) => voucher?.promotion?.code?.toLowerCase() === voucherCode.toLowerCase()
+        );
+
+        if (matchedVoucher) {
+            setSelectedVoucher(matchedVoucher);
+            setAppliedVoucherCodeDisplay(matchedVoucher.promotion?.code);
+            calculateDiscount(matchedVoucher);
+        } else {
+            alert("Invalid voucher code.");
+            setSelectedVoucher(null);
+            setDiscountAmount(0);
+            setAppliedVoucherCodeDisplay("");
+            setVoucherCode("");
+        }
+    };
+
+    const calculateDiscount = (voucher: any) => {
+        if (!cartTotalPrice) return;
+
+        const discountType = voucher.discountType;
+        const discountValue = voucher.discountValue;
+        const percentage = voucher.percentage;
+        let calculatedDiscount = 0;
+
+        if (discountType === "fixedAmount" && typeof discountValue === 'number') {
+            calculatedDiscount = discountValue;
+        } else if (discountType === "percentage" && typeof percentage === 'number') {
+            calculatedDiscount = (cartTotalPrice * percentage) / 100;
+        }
+
+        setDiscountAmount(calculatedDiscount);
     };
 
     // Shipping methods
@@ -80,7 +144,7 @@ function Checkout() {
             let userId;
             console.log("User Id:", userId);
             // Get total price of cart
-            const totalAmount = (getTotal() + shippingCost) * 10; // Convert to cents
+            const totalAmount = (getTotal() + shippingCost - discountAmount) * 10; // Convert to cents
             if (totalAmount <= 0) {
                 alert("Cart is empty!");
                 setLoading(false);
@@ -105,8 +169,11 @@ function Checkout() {
                         email: userInfo.email,
                         statusCheckout: "Pending",
                         shipping: { id: selectedShippingMethodId },
-
                         shippingCost: shippingCost,
+
+                        discountAmount: discountAmount,
+                        voucherCode: appliedVoucherCodeDisplay,
+
                         lineItems: cart.map((item) => ({
                             product: { id: item.id },
                             quantity: item.quantity,
@@ -168,7 +235,7 @@ function Checkout() {
 
                 console.log("Payment Method created:", paymentMethod);
 
-                const totalPriceInCents = Math.round(((cartTotalPrice || 0) + (typeof shippingCost === 'number' ? shippingCost : 0)) * 100);
+                const totalPriceInCents = Math.round(((cartTotalPrice || 0) + (typeof shippingCost === 'number' ? shippingCost : 0) - discountAmount) * 100);
                 // Create payment intent and link it with order
                 const paymentResponse = await fetch(
                     "http://localhost:1337/api/payments",
@@ -317,14 +384,42 @@ function Checkout() {
                                 </div>
                             </div>
 
-                            {/* Promotion section when use voucher in order */}
-                            {/* <div className="mb-8">
-                                <ShippingMethods
-                                    lineItems={lineItemsForShipping}
-                                    totalPrice={getTotal()}
-                                    onSelectShippingMethod={handleShippingMethodSelect}
-                                />
-                            </div> */}
+                            {/* Voucher section*/}
+                            <div className="mb-8">
+                                <h2 className="text-2xl font-bold mb-4 flex items-center relative">
+                                    Voucher
+                                    {selectedVoucher && (
+                                        <div className="relative ml-4 flex items-center justify-center w-6 h-6 text-white font-semibold text-xs">
+                                            <FontAwesomeIcon
+                                                icon={faTicketSimple}
+                                                size="2x"
+                                                color="oklch(64.5% 0.246 16.439)"
+                                                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                                            />
+                                            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-semibold text-white">
+                                                {selectedVoucher?.discountType === "percentage" && `-${selectedVoucher.percentage}%`}
+                                                {selectedVoucher?.discountType === "fixedAmount" && `-${formatCurrency(selectedVoucher.discountValue)}`}
+                                            </span>
+                                        </div>
+                                    )}
+                                </h2>
+                                <div className="mb-4 flex">
+                                    <input
+                                        type="text"
+                                        id="voucherCode"
+                                        className="w-full p-3 border rounded-xl"
+                                        value={voucherCode}
+                                        onChange={handleVoucherInputChange}
+                                    />
+                                    <button
+                                        onClick={handleApplyVoucher}
+                                        className="bg-rose-400 hover:bg-rose-500 text-white font-bold py-2 px-4 rounded-full w-40 ml-2"
+                                    >
+                                        APPLY
+                                    </button>
+
+                                </div>
+                            </div>
 
                             {/* Shipping method */}
                             <div className="mb-8">
@@ -392,14 +487,25 @@ function Checkout() {
                                             <span>{formatCurrency(cartTotalPrice)}</span>
                                         </div>
                                         {/* Add discount cost */}
-                                        {/* <div className="flex justify-between">
-                                            <span>Voucher</span>
-                                            <span className="font-medium text-sm text-rose-500">
-                                                {shippingCost > 0
-                                                    ? formatCurrency(shippingCost)
-                                                    : "FREE"}
-                                            </span>
-                                        </div> */}
+                                        {selectedVoucher && (
+                                            <div className="flex justify-between">
+                                                <span>
+                                                    Voucher {selectedVoucher?.promotion?.code}
+                                                </span>
+                                                <span className="font-medium text-sm text-rose-500">-
+                                                    {selectedVoucher?.discountType === "fixedAmount" &&
+                                                        typeof selectedVoucher?.discountValue === "number"
+                                                        ? formatCurrency(selectedVoucher.discountValue)
+                                                        : selectedVoucher?.discountType === "percentage" &&
+                                                            typeof selectedVoucher?.percentage === "number" ? formatCurrency(
+                                                                ((cartTotalPrice || 0) * selectedVoucher.percentage) / 100
+                                                            )
+                                                            : "-"}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Shipping cost */}
                                         <div className="flex justify-between">
                                             <span>Shipping</span>
                                             <span className="font-medium text-sm text-rose-500">
@@ -414,7 +520,7 @@ function Checkout() {
                                     <div className="border-t border-gray-300 mt-4 pt-4 flex justify-between items-center">
                                         <span className="text-lg font-medium">Total</span>
                                         <div className="text-2xl font-bold text-rose-500">
-                                            {formatCurrency((cartTotalPrice || 0) + shippingCost)}
+                                            {formatCurrency((cartTotalPrice || 0) + shippingCost - discountAmount)}
                                         </div>
                                     </div>
                                 </div>
