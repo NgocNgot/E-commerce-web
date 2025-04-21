@@ -75,6 +75,7 @@ export default factories.createCoreController(
           const orderId = order.documentId;
           const customerName = payment.users_permissions_user.username;
           const totalPrice = order.totalPrice;
+          const discountAmount = order.discountAmount || 0;
           const recipientEmail = order.email;
           const shippingCost = order.shippingCost || 0;
 
@@ -102,8 +103,8 @@ export default factories.createCoreController(
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 8px;">${item.title || "Not found name Product"}</td>
                   <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
-                  <td style="border: 1px solid #ddd; padding: 8px;">${item.price} USD</td>
-                  <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity * item.price} USD</td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">${item.totalItemPrice} USD</td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity * item.totalItemPrice} USD</td>
                 </tr>
             `;
           });
@@ -120,8 +121,12 @@ export default factories.createCoreController(
             shippingCost.toFixed(2) + " USD"
           );
           emailHTML = emailHTML.replace(
-            "{{totalAmount}}",
-            totalPrice + shippingCost + " USD"
+            "{{discountAmount}}",
+            discountAmount.toFixed(2) + " USD"
+          );
+          emailHTML = emailHTML.replace(
+            "{{totalPrice}}",
+            totalPrice.toFixed(2) + " USD"
           );
           emailHTML = emailHTML.replace(
             "{{orderDate}}",

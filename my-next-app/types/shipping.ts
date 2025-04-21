@@ -24,6 +24,7 @@ export interface LineItem {
   length: number;
   width: number;
   height: number;
+  totalItemPrice: number;
 }
 
 export interface ShippingMethodsProps {
