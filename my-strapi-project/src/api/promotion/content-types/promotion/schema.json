@@ -52,6 +52,9 @@
       "relation": "oneToMany",
       "target": "api::buy-x-get-y.buy-x-get-y",
       "mappedBy": "promotion"
+    },
+    "usageCount": {
+      "type": "integer"
     }
   }
 }

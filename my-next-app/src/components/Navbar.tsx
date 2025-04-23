@@ -15,9 +15,13 @@ export default function Navbar() {
 
   const handleLoginSuccess = (userData: any, token: string) => {
     login(userData, token)
-    if (userData.id) {
-      assignCartToUser(userData.id, token)
+    if (userData?.id) {
+      localStorage.setItem('userId', JSON.stringify(userData.id));
+      assignCartToUser(userData.id, token);
     }
+    localStorage.setItem('token', token);
+
+    setShowLoginModal(false);
   }
 
   return (
@@ -122,6 +126,7 @@ export default function Navbar() {
             console.log("User context updated:", user);
 
             if (user.id) {
+              localStorage.setItem('userId', JSON.stringify(user.id));
               assignCartToUser(user.id, token);
             }
             setShowLoginModal(false);

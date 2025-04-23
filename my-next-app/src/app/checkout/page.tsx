@@ -8,6 +8,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTicketSimple } from '@fortawesome/free-solid-svg-icons';
 import { loadStripe } from "@stripe/stripe-js";
 import { CardElement, useStripe, useElements, Elements } from "@stripe/react-stripe-js";
+import { User } from "@/../types/users";
+import { fetchUserById } from "../../api/users";
 import ShippingMethods from "@/app/checkout/ShippingMethods";
 import { LineItem } from "@/../types/shipping";
 
@@ -20,6 +22,8 @@ function Checkout() {
         phone: "",
         email: "",
     });
+    const [userId, setUserId] = useState<number | null>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(false);
     const [saveInfo, setSaveInfo] = useState(false);
     const [useShippingAsBilling, setUseShippingAsBilling] = useState(true);
@@ -34,6 +38,7 @@ function Checkout() {
     const [selectedVoucher, setSelectedVoucher] = useState<any | null>(null);
     const [discountAmount, setDiscountAmount] = useState<number>(0);
     const [appliedVoucherCodeDisplay, setAppliedVoucherCodeDisplay] = useState<string>("");
+    const [usedVoucher, setUsedVoucher] = useState<string | null>(null); // State to track used voucher
 
     useEffect(() => {
         const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -42,8 +47,23 @@ function Checkout() {
         const storedTotalPrice = JSON.parse(localStorage.getItem("cartTotalPrice") || "null");
         setCartTotalPrice(storedTotalPrice);
 
+        // Get userId from localStorage
+        const storedUserId = localStorage.getItem('userId');
+        console.log("User ID from localStorage on Checkout load:", storedUserId); // Kiểm tra
+        if (storedUserId) {
+            try {
+                const parsedUserId = JSON.parse(storedUserId);
+                setUserId(parsedUserId);
+                fetchCurrentUser(parsedUserId);
+            } catch (error) {
+                console.error("Error parsing userId from localStorage:", error);
+                setUserId(null);
+            }
+        } else {
+            alert("User ID not found. Please log in again.");
+        }
         // useEffect of voucher
-        fetchAvailableVouchers();
+        fetchAvailableVouchers(userId);
 
     }, []);
 
@@ -59,43 +79,111 @@ function Checkout() {
         }
     };
 
-    // Voucher methods
-    const fetchAvailableVouchers = async () => {
+    const fetchCurrentUser = async (id: number) => {
+        const user = await fetchUserById(id);
+        if (user) {
+            setCurrentUser(user);
+        } else {
+            console.error(`Could not fetch user with ID: ${id}`);
+            alert("Error fetching user details. Please log in again.");
+            setUserId(null);
+            setCurrentUser(null);
+        }
+    };
+    const handleVoucherInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setVoucherCode(e.target.value);
+    };
+    // Handle apply voucher
+    const handleApplyVoucher = () => {
+        const voucherCodeToCompare = voucherCode.trim().toUpperCase();
+
+        // Check if the voucher has already been used in this session
+        if (usedVoucher === voucherCodeToCompare) {
+            alert("Voucher đã được sử dụng và không thể dùng lại.");
+            setVoucherCode("");
+            return;
+        }
+
+        const matchedPromotion = availableVouchers.find(
+            (voucher) => voucher?.promotion?.code?.trim().toUpperCase() === voucherCodeToCompare
+        )?.promotion;
+
+        if (matchedPromotion) {
+            // Check maximumUses
+            if (matchedPromotion.maximumUses !== null && matchedPromotion.maximumUses > 0 && matchedPromotion.usageCount >= matchedPromotion.maximumUses) {
+                alert("This voucher code has expired!");
+                setSelectedVoucher(null);
+                setDiscountAmount(0);
+                setAppliedVoucherCodeDisplay("");
+                setVoucherCode("");
+                return;
+            }
+            // Check if the user is excludedUsers from the promotion
+            const isExcludedUser = matchedPromotion.excludedUsers?.some(
+                (excludedUser: any) => excludedUser.id === userId
+            );
+
+            if (isExcludedUser) {
+                alert("You cannot use this voucher!");
+                setSelectedVoucher(null);
+                setDiscountAmount(0);
+                setAppliedVoucherCodeDisplay("");
+                setVoucherCode("");
+            } else {
+                const matchedVoucher = matchedPromotion.amount_off_order?.[0];
+                if (matchedVoucher) {
+                    setSelectedVoucher({
+                        ...matchedVoucher,
+                        promotion: {
+                            code: matchedPromotion.code,
+                            documentId: matchedPromotion.documentId,
+                            usageCount: matchedPromotion.usageCount,
+                            maximumUses: matchedPromotion.maximumUses,
+                        },
+                    });
+                    setAppliedVoucherCodeDisplay(matchedPromotion.code);
+                    calculateDiscount({ ...matchedVoucher, promotion: { code: matchedPromotion.code } });
+                } else {
+                    alert("Invalid voucher code.");
+                    setSelectedVoucher(null);
+                    setDiscountAmount(0);
+                    setAppliedVoucherCodeDisplay("");
+                    setVoucherCode("");
+                }
+            }
+        }
+    };
+    const fetchAvailableVouchers = async (currentUserId: number | null) => {
         try {
-            const response = await fetch("http://localhost:1337/api/amount-off-orders?populate=promotion");
+            const response = await fetch("http://localhost:1337/api/promotions?populate=*");
             if (!response.ok) {
-                console.error("Failed to fetch vouchers");
+                console.error("Failed to fetch promotions with voucher info");
                 return;
             }
             const data = await response.json();
-            setAvailableVouchers(data.data);
+            const promotions = data.data;
+            const now = new Date();
+            const availableVouchers: any[] = [];
+
+            promotions.forEach((promotion: any) => {
+                const startDate = new Date(promotion.startDate);
+                const endDate = new Date(promotion.endDate);
+                const isWithinDateRange = now >= startDate && now <= endDate;
+
+                if (isWithinDateRange && promotion.amount_off_order && promotion.amount_off_order.length > 0) {
+                    promotion.amount_off_order.forEach((orderVoucher: any) => {
+                        availableVouchers.push({ ...orderVoucher, promotion: { ...promotion } });
+                    });
+                }
+            });
+
+            console.log("Available vouchers:", availableVouchers);
+            setAvailableVouchers(availableVouchers);
+
         } catch (error) {
             console.error("Error fetching vouchers:", error);
         }
     };
-
-    const handleVoucherInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setVoucherCode(e.target.value);
-    };
-
-    const handleApplyVoucher = () => {
-        const matchedVoucher = availableVouchers.find(
-            (voucher) => voucher?.promotion?.code?.toLowerCase() === voucherCode.toLowerCase()
-        );
-
-        if (matchedVoucher) {
-            setSelectedVoucher(matchedVoucher);
-            setAppliedVoucherCodeDisplay(matchedVoucher.promotion?.code);
-            calculateDiscount(matchedVoucher);
-        } else {
-            alert("Invalid voucher code.");
-            setSelectedVoucher(null);
-            setDiscountAmount(0);
-            setAppliedVoucherCodeDisplay("");
-            setVoucherCode("");
-        }
-    };
-
     const calculateDiscount = (voucher: any) => {
         if (!cartTotalPrice) return;
 
@@ -145,8 +233,11 @@ function Checkout() {
         setLoading(true);
 
         try {
-            let userId;
-            console.log("User Id:", userId);
+            if (!userId) {
+                alert("User ID not found. Please log in again.");
+                setLoading(false);
+                return;
+            }
             // Get total price of cart
             const totalAmount =
                 (getTotal() + shippingCost - discountAmount) * 10; // Convert to cents
@@ -157,44 +248,47 @@ function Checkout() {
             }
 
             // Send cart data to the server to create an order
-            const orderResponse = await fetch("http://localhost:1337/api/orders", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    data: {
-                        users_permissions_user: { id: 2 },
-                        totalPrice: cartTotalPrice || 0,
-                        name: userInfo.name,
-                        address: userInfo.address,
-                        city: userInfo.city,
-                        phone: userInfo.phone,
-                        email: userInfo.email,
-                        statusCheckout: "Pending",
-                        shipping: { id: selectedShippingMethodId },
-                        shippingCost: shippingCost,
-
-                        discountAmount: discountAmount,
-                        voucherCode: appliedVoucherCodeDisplay,
-
-                        lineItems: cart.map((item) => ({
-                            product: { id: item.id },
-                            quantity: item.quantity,
-                            price: item.price,
-                            title: item.title,
-                            // Shipping need
-                            weight: item.weight,
-                            length: item.length,
-                            width: item.width,
-                            height: item.height,
-
-                            totalItemPrice: item.totalItemPrice,
-                        })),
+            const orderResponse = await fetch(
+                "http://localhost:1337/api/orders",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
                     },
-                }),
-            });
+                    body: JSON.stringify({
+                        data: {
+                            users_permissions_user: { id: userId },
+                            totalPrice: ((cartTotalPrice || 0) + (shippingCost || 0) - (discountAmount || 0)).toFixed(2),
+                            name: userInfo.name,
+                            address: userInfo.address,
+                            city: userInfo.city,
+                            phone: userInfo.phone,
+                            email: userInfo.email,
+                            statusCheckout: "Pending",
+                            shipping: { id: selectedShippingMethodId },
+                            shippingCost: shippingCost,
+
+                            discountAmount: discountAmount,
+                            voucherCode: appliedVoucherCodeDisplay,
+
+                            lineItems: cart.map((item) => ({
+                                product: { id: item.id },
+                                quantity: item.quantity,
+                                price: item.price,
+                                title: item.title,
+                                // Shipping need
+                                weight: item.weight,
+                                length: item.length,
+                                width: item.width,
+                                height: item.height,
+
+                                totalItemPrice: item.totalItemPrice,
+                            })),
+                        },
+                    }),
+                }
+            );
 
             const orderData = await orderResponse.json();
             if (!orderResponse.ok) {
@@ -256,7 +350,7 @@ function Checkout() {
                             data: {
                                 amount: totalPriceInCents * 10,
                                 currency: "USD",
-                                users_permissions_user: { id: 2 },
+                                users_permissions_user: { id: userId },
                                 order: { id: finalOrderId },
                                 paymentMethodId: paymentMethod.id,
                                 email: userInfo.email,
@@ -275,23 +369,13 @@ function Checkout() {
                 }
 
                 console.log("Payment Intent created:", paymentData);
+                alert("Payment successful!");
+                // Update voucher usage count on Strapi
+                console.log("Attempting to update voucher usage count...");
+                if (appliedVoucherCodeDisplay && selectedVoucher?.promotion?.documentId) {
 
-                // Confirm Payment
-                const { error, paymentIntent } = await stripe.confirmCardPayment(
-                    paymentData.clientSecret,
-                    {
-                        payment_method: paymentMethod.id,
-                    }
-                );
-
-                if (error) {
-                    console.error("Payment failed:", error);
-                    alert(`Payment failed: ${error.message}`);
-                } else if (paymentIntent && paymentIntent.status === "succeeded") {
-                    alert("Payment successful!");
-                    // Update payment status to "Succeeded" in Strapi
-                    const updatePaymentStatus = await fetch(
-                        `http://localhost:1337/api/payments/${paymentData.data.id}`,
+                    const updateVoucherResponse = await fetch(
+                        `http://localhost:1337/api/promotions/${selectedVoucher.promotion.documentId}`,
                         {
                             method: "PUT",
                             headers: {
@@ -300,18 +384,24 @@ function Checkout() {
                             },
                             body: JSON.stringify({
                                 data: {
-                                    statusPayment: "Succeeded",
+                                    usageCount: (selectedVoucher.promotion.usageCount || 0) + 1,
                                 },
                             }),
                         }
                     );
 
-                    if (updatePaymentStatus.ok) {
-                        localStorage.setItem("cart", "[]");
-                        setCart([]);
+                    if (!updateVoucherResponse.ok) {
+                        console.error(`Failed to update voucher usage count on the server. Status: ${updateVoucherResponse.status}`);
                     } else {
-                        alert("Failed to update payment status!");
+                        console.log(`Voucher usage count updated successfully on the server. Status: ${updateVoucherResponse.status}`);
                     }
+
+                    localStorage.setItem("cart", "[]");
+                    setCart([]);
+                    setAppliedVoucherCodeDisplay("");
+                    setDiscountAmount(0);
+                    setSelectedVoucher(null);
+                    setVoucherCode("");
                 }
             }, 3000); // Delay 3 seconds to ensure order is created
         } catch (error) {
@@ -497,7 +587,7 @@ function Checkout() {
                                         {selectedVoucher && (
                                             <div className="flex justify-between">
                                                 <span>
-                                                    Voucher {selectedVoucher?.promotion?.code}
+                                                    Voucher · {selectedVoucher?.promotion?.code}
                                                 </span>
                                                 <span className="font-medium text-sm text-rose-500">-
                                                     {selectedVoucher?.discountType === "fixedAmount" &&

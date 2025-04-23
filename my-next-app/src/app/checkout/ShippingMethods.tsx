@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 // Add shipping
 import { ShippingMethodsProps, ShippingMethod, LineItem } from '@/../types/shipping';
 import { fetchShippingMethodsApi } from '@/api/shipping';
@@ -7,6 +7,9 @@ const ShippingMethods: React.FC<ShippingMethodsProps> = ({ lineItems, totalPrice
     const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
     const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
     const [shippingCosts, setShippingCosts] = useState<{ [key: string]: number }>({});
+    const totalLineItemsPrice = useMemo(() => {
+        return lineItems.reduce((sum, item) => sum + item.totalItemPrice, 0);
+    }, [lineItems]);
     useEffect(() => {
         const loadShippingMethods = async () => {
             try {
@@ -38,7 +41,7 @@ const ShippingMethods: React.FC<ShippingMethodsProps> = ({ lineItems, totalPrice
             });
 
             let shippingCost = 0;
-            if (method.shippingMethodId === 'FREE_OVER' && totalPrice >= 50) {
+            if (method.shippingMethodId === 'FREE_OVER' && totalLineItemsPrice >= 50) {
                 shippingCost = 0;
             } else {
                 const applicableRate = method.shipping_rates.find(
@@ -58,7 +61,7 @@ const ShippingMethods: React.FC<ShippingMethodsProps> = ({ lineItems, totalPrice
 
     const handleSelectMethod = (methodId: number, cost: number) => {
         const selectedMethod = shippingMethods.find(method => method.id === methodId);
-        if (selectedMethod?.shippingMethodId === 'FREE_OVER' && totalPrice < 50) {
+        if (selectedMethod?.shippingMethodId === 'FREE_OVER' && totalLineItemsPrice < 50) {
             return;
         }
         setSelectedMethodId(methodId);
@@ -70,7 +73,7 @@ const ShippingMethods: React.FC<ShippingMethodsProps> = ({ lineItems, totalPrice
             <h1 className="text-2xl font-bold mb-4">Shipping Method</h1>
             {shippingMethods.map((method) => (
                 <div key={method.id} className="mb-2">
-                    <label className={`flex items-center ${method.shippingMethodId === 'FREE_OVER' && totalPrice < 50 ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer'}`}>
+                    <label className={`flex items-center ${method.shippingMethodId === 'FREE_OVER' && totalLineItemsPrice < 50 ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer'}`}>
                         <input
                             type="radio"
                             value={method.shippingMethodId}
@@ -82,12 +85,12 @@ const ShippingMethods: React.FC<ShippingMethodsProps> = ({ lineItems, totalPrice
                                 )
                             }
                             className="mr-2"
-                            disabled={method.shippingMethodId === 'FREE_OVER' && totalPrice < 50}
+                            disabled={method.shippingMethodId === 'FREE_OVER' && totalLineItemsPrice < 50}
                         />
                         <div className="flex justify-between w-full">
                             <span>{method.nameShippingMethod}</span>
                             <div className="flex items-center">
-                                {method.shippingMethodId === "FREE_OVER" && totalPrice < 50 && (
+                                {method.shippingMethodId === "FREE_OVER" && totalLineItemsPrice < 50 && (
                                     <span className="text-sm text-red-500 mr-2">
                                         (Need to order $50)
                                     </span>

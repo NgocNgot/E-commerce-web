@@ -1,6 +1,6 @@
 import { Category } from "./categories";
 import { Product } from "./product";
-
+import { User } from "./users";
 export interface AmountOffProduct {
   id: number;
   documentId: string;
@@ -30,6 +30,8 @@ export interface Promotion {
   endDate: string;
   code: string;
   maximumUses: number;
+  usageCount: number;
+  excludedUsers: User[];
   amount_off_products: AmountOffProduct[]; // Get interface AmountOffProduct
   amount_off_order: AmountOffOrder[]; // Get interface AmountOffOrder
   buy_x_get_y: any[];
