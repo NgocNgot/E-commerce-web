@@ -17,11 +17,11 @@
     "getQuantity": {
       "type": "integer"
     },
-    "get_product": {
+    "get_products": {
       "type": "relation",
-      "relation": "oneToMany",
+      "relation": "manyToMany",
       "target": "api::product.product",
-      "mappedBy": "buy_x_get_y"
+      "inversedBy": "buy_x_get_ies"
     },
     "applies_to_categories": {
       "type": "relation",
@@ -29,11 +29,17 @@
       "target": "api::category.category",
       "inversedBy": "buy_x_get_ies"
     },
-    "promotion": {
+    "promotions": {
       "type": "relation",
-      "relation": "manyToOne",
+      "relation": "manyToMany",
       "target": "api::promotion.promotion",
-      "inversedBy": "buy_x_get_y"
+      "inversedBy": "buy_x_get_ies"
+    },
+    "applies_to_products": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::product.product",
+      "inversedBy": "buy_x_get_ies"
     }
   }
 }

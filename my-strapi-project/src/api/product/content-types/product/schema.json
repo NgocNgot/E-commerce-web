@@ -86,11 +86,11 @@
       "target": "api::amount-off-product.amount-off-product",
       "mappedBy": "applies_to_products"
     },
-    "buy_x_get_y": {
+    "buy_x_get_ies": {
       "type": "relation",
-      "relation": "manyToOne",
+      "relation": "manyToMany",
       "target": "api::buy-x-get-y.buy-x-get-y",
-      "inversedBy": "get_product"
+      "mappedBy": "applies_to_products"
     }
   }
 }

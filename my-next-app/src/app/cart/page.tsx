@@ -36,10 +36,14 @@ export default function CartPage() {
 
             return {
               ...product,
+              id: item.id,
+              documentId: product.id,
               quantity: item.quantity,
               image: product.media[0].url
                 ? `http://localhost:1337${product.media[0].url}`
-                : "/placeholder.jpg", // Cập nhật đường dẫn hình ảnh
+                : "/placeholder.jpg",
+              pricing: product.pricing,
+              isGift: item.isGift || false,
             };
           })
           .filter(Boolean);
@@ -51,7 +55,7 @@ export default function CartPage() {
         setLoading(false);
       }
     };
-    // Feature Promotion
+    // Feature promotion
     const fetchPromotionData = async () => {
       const promotionsData = await fetchPromotions();
       setPromotions(promotionsData);
@@ -71,19 +75,16 @@ export default function CartPage() {
   };
 
   const totalPrice = cart.reduce((total, item) => {
-    if (promotions && amountOffProducts) {
-      const { discountedPrice } = calculateDiscountedPrice(item as Product, promotions, amountOffProducts);
-      return total + (discountedPrice || item.pricing.price) * item.quantity;
-    }
-    return total + item.pricing.price * item.quantity;
+    const price = item.isGift ? 0 : (promotions && amountOffProducts ? calculateDiscountedPrice(item as Product, promotions, amountOffProducts).discountedPrice : item.pricing.price) || 0;
+    return total + price * item.quantity;
   }, 0);
 
   const handleCheckout = () => {
     const cartItemsWithTotal = cart.map(item => {
-      const { discountedPrice } = promotions && amountOffProducts ? calculateDiscountedPrice(item as Product, promotions, amountOffProducts) : { discountedPrice: item.pricing.price };
+      const price = item.isGift ? 0 : (promotions && amountOffProducts ? calculateDiscountedPrice(item as Product, promotions, amountOffProducts).discountedPrice : item.pricing?.price) || 0;
       return {
         ...item,
-        totalItemPrice: discountedPrice * item.quantity
+        totalItemPrice: price * item.quantity
       };
     });
 
@@ -108,7 +109,10 @@ export default function CartPage() {
           {/* Products in cart */}
           {cart.map((item: any) => {
             const { discountedPrice } = promotions && amountOffProducts ? calculateDiscountedPrice(item as Product, promotions, amountOffProducts) : { discountedPrice: item.pricing.price };
-            const hasDiscount = discountedPrice !== item.pricing.price;
+            const originalPrice = item.pricing?.price;
+            const hasDiscount = discountedPrice !== originalPrice && !item.isGift;
+            const priceToDisplay = item.isGift ? 0 : discountedPrice;
+
             return (
               <div key={item.documentId} className="grid grid-cols-5 items-center py-4 border-b border-gray-300 text-center">
                 <div className="flex items-center space-x-4 col-span-2 text-left pl-4">
@@ -117,9 +121,10 @@ export default function CartPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {hasDiscount && (
-                    <span className="text-lg text-gray-400 line-through">${item.pricing.price}</span> // Chỉ gạch giá cũ khi có giảm giá
+                    <span className="text-lg text-gray-400 line-through">${originalPrice}</span> // Chỉ gạch giá cũ khi có giảm giá
                   )}
-                  <span className="text-lg font-semibold text-rose-500">${discountedPrice}</span>
+                  <span className="text-lg font-semibold text-rose-500">${priceToDisplay}</span>
+                  {item.isGift && <span className="text-sm text-rose-500 ml-2">(GIFT)</span>}
                 </div>
                 {/* Quantity */}
                 <div className="flex items-center gap-2 border rounded-full px-2 py-1 h-10 justify-center w-32">
@@ -131,7 +136,7 @@ export default function CartPage() {
                     <PlusIcon className="h-4 w-4" />
                   </button>
                 </div>
-                <span className="text-lg font-semibold text-right pr-8">${(discountedPrice * item.quantity)}</span>
+                <span className="text-lg font-semibold text-right pr-8">${(priceToDisplay * item.quantity)}</span>
               </div>
             );
           })}

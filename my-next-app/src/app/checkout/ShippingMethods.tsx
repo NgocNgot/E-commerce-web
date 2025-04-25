@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+// Add shipping
 import { ShippingMethodsProps, ShippingMethod, LineItem } from '@/../types/shipping';
 import { fetchShippingMethodsApi } from '@/api/shipping';
 

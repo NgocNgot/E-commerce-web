@@ -573,11 +573,18 @@ export interface ApiBuyXGetYBuyXGetY extends Struct.CollectionTypeSchema {
       'manyToMany',
       'api::category.category'
     >;
+    applies_to_products: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::product.product'
+    >;
     buyQuantity: Schema.Attribute.Integer;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    get_product: Schema.Attribute.Relation<'oneToMany', 'api::product.product'>;
+    get_products: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::product.product'
+    >;
     getQuantity: Schema.Attribute.Integer;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
@@ -585,8 +592,8 @@ export interface ApiBuyXGetYBuyXGetY extends Struct.CollectionTypeSchema {
       'api::buy-x-get-y.buy-x-get-y'
     > &
       Schema.Attribute.Private;
-    promotion: Schema.Attribute.Relation<
-      'manyToOne',
+    promotions: Schema.Attribute.Relation<
+      'manyToMany',
       'api::promotion.promotion'
     >;
     publishedAt: Schema.Attribute.DateTime;
@@ -611,6 +618,7 @@ export interface ApiCartCart extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    isGift: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::cart.cart'> &
       Schema.Attribute.Private;
@@ -897,8 +905,8 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
     blocks: Schema.Attribute.DynamicZone<
       ['shared.seo', 'shared.rich-text', 'shared.media']
     >;
-    buy_x_get_y: Schema.Attribute.Relation<
-      'manyToOne',
+    buy_x_get_ies: Schema.Attribute.Relation<
+      'manyToMany',
       'api::buy-x-get-y.buy-x-get-y'
     >;
     carts: Schema.Attribute.Relation<'manyToMany', 'api::cart.cart'>;
@@ -962,8 +970,8 @@ export interface ApiPromotionPromotion extends Struct.CollectionTypeSchema {
       'oneToMany',
       'api::amount-off-product.amount-off-product'
     >;
-    buy_x_get_y: Schema.Attribute.Relation<
-      'oneToMany',
+    buy_x_get_ies: Schema.Attribute.Relation<
+      'manyToMany',
       'api::buy-x-get-y.buy-x-get-y'
     >;
     code: Schema.Attribute.String;
@@ -989,6 +997,7 @@ export interface ApiPromotionPromotion extends Struct.CollectionTypeSchema {
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    usageCount: Schema.Attribute.Integer;
   };
 }
 

@@ -4,6 +4,9 @@ import {
   AmountOffProduct,
   AmountOffOrderResponse,
   AmountOffOrder,
+  BuyXGetYResponse,
+  BuyXGetY,
+  BuyXGetYProductLite,
 } from "../../types/promotion";
 import { Product } from "../../types/product";
 
@@ -24,12 +27,23 @@ export async function fetchAmountOffProducts(): Promise<AmountOffProductResponse
   }
   return response.json();
 }
+
 export async function fetchAmountOffOrders(): Promise<AmountOffOrderResponse> {
   const response = await fetch(
     `${API_URL}/amount-off-orders?populate=promotion`
   );
   if (!response.ok) {
     throw new Error("Failed to fetch amount off order vouchers");
+  }
+  return response.json();
+}
+
+export async function fetchBuyXGetY(): Promise<BuyXGetYResponse> {
+  const response = await fetch(
+    `${API_URL}/buy-x-get-ies?populate=get_products&populate=applies_to_products`
+  );
+  if (!response.ok) {
+    throw new Error("Failed to fetch Buy X Get Y promotions");
   }
   return response.json();
 }

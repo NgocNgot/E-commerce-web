@@ -28,6 +28,10 @@
     },
     "totalPrice": {
       "type": "decimal"
+    },
+    "isGift": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

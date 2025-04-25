@@ -12,8 +12,17 @@ import { getCategories } from "@/api/categories";
 import { Product } from "../../types/product";
 import { getProducts, getProductBySlug } from "../api/products";
 import { fetchPromotions, fetchAmountOffProducts, calculateDiscountedPrice } from "@/api/promotions";
-import { PromotionResponse, AmountOffProductResponse } from "../../types/promotion";
+import { PromotionResponse, AmountOffProductResponse, BuyXGetYResponse, BuyXGetY } from "../../types/promotion";
 
+
+async function fetchBuyXGetYData(): Promise<BuyXGetY[]> { // Thêm kiểu trả về Promise<BuyXGetY[]>
+  const response = await fetch('http://localhost:1337/api/buy-x-get-ies?populate=*');
+  if (!response.ok) {
+    throw new Error('Failed to fetch Buy X Get Y data');
+  }
+  const data: BuyXGetYResponse = await response.json(); // Ép kiểu dữ liệu cho response
+  return data.data;
+}
 export async function generateMetadata(): Promise<Metadata> {
   const URL = "http://localhost:3000";
   const slug = "liceria-beauty-skincare";
@@ -76,7 +85,7 @@ export default async function HomePage() {
   const categories: Category[] = await getCategories();
   const promotions: PromotionResponse = await fetchPromotions();
   const amountOffProducts: AmountOffProductResponse = await fetchAmountOffProducts();
-
+  const buyXGetYData: BuyXGetY[] = await fetchBuyXGetYData();
   return (
     <>
       <Navbar />
@@ -123,7 +132,12 @@ export default async function HomePage() {
               .filter((product) => product.slug !== "liceria-beauty-skincare")
               .map((product) => {
                 const { discountedPrice, discountPercentage } = calculateDiscountedPrice(product, promotions, amountOffProducts);
-
+                const isBuyXGetYProduct = buyXGetYData.some(
+                  (item) =>
+                    item.applies_to_products?.some(
+                      (appliedProduct) => appliedProduct.documentId === product.documentId
+                    )
+                );
                 return (
                   <div
                     key={product.documentId}
@@ -135,6 +149,14 @@ export default async function HomePage() {
                         -{discountPercentage}%
                       </div>
                     )}
+
+                    {
+                      isBuyXGetYProduct && (
+                        <div className="absolute left-4 top-6 bg-rose-400 text-white px-3 py-1 z-10 text-xs shadow-lg animate-bounce">
+                          SALE
+                        </div>
+                      )
+                    }
 
 
                     <Link
@@ -161,10 +183,12 @@ export default async function HomePage() {
                           className="object-cover w-full h-full transition-opacity duration-500 group-hover:opacity-50"
                         />
                       )}
-                      <button className="absolute bottom-1/3 left-1/2 transform -translate-x-1/2 bg-rose-500 text-white text-base shadow-lg px-4 py-2 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2">
+                      {/* Button */}
+                      <button className="absolute bottom-1/3 left-1/2 transform -translate-x-1/2 bg-rose-500 text-white text-base whitespace-nowrap shadow-lg px-4 py-2 opacity-0 flex items-center justify-center gap-2 translate-y-6 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-in-out">
                         <ShoppingCartIcon className="h-6 w-6" />
                         <span>Add to cart</span>
                       </button>
+
                       <h2 className="text-base font-semibold mt-2">{product.title}</h2>
                       <div className="mt-2 flex items-center justify-center">
                         {discountPercentage > 0 && (

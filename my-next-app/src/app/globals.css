@@ -25,3 +25,17 @@ body {
   color: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+@keyframes slideUpFadeIn {
+  0% {
+    transform: translateY(20px); /* Bắt đầu từ dưới lên 20px */
+    opacity: 0; /* Ban đầu trong suốt */
+  }
+  100% {
+    transform: translateY(0); /* Đến vị trí cuối cùng */
+    opacity: 1; /* Hiện rõ hoàn toàn */
+  }
+}
+
+.animate-slide-up-fade-in {
+  animation: slideUpFadeIn 0.5s ease-out forwards; /* Thời gian, kiểu easing và giữ trạng thái cuối */
+}

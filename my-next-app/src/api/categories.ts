@@ -2,6 +2,7 @@ import { gql } from "@apollo/client";
 import client from "../lib/apolloClient";
 import { Category } from "../../types/categories";
 
+// GraphQL-get categories
 const GET_CATEGORIES = gql`
   query GetCategories {
     categories(

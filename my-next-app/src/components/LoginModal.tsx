@@ -30,9 +30,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onLoginSuccess }) => {
             if (!response.ok) {
                 throw new Error(data.message || "Login failed");
             }
-
-            console.log("Login successful", data);
-
             // Call onLoginSuccess with user data and token
             onLoginSuccess(data.user, data.jwt);
 

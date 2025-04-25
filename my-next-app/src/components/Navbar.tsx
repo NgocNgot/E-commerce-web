@@ -62,7 +62,7 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center space-x-4">
-          {/* Search */}
+          {/* Search is not runing */}
           <div className="flex items-center space-x-2 bg-gray-100 px-2 py-1 rounded-full">
             <input
               type="text"
@@ -120,16 +120,15 @@ export default function Navbar() {
         <LoginModal
           onClose={() => setShowLoginModal(false)}
           onLoginSuccess={(user, token) => {
-            console.log("Login successful:", user, token)
-            // Update the user context with the logged in user
-            login(user, token)
+            console.log("Login successful:", user, token);
+
+            login(user, token);
             console.log("User context updated:", user);
 
             if (user.id) {
               localStorage.setItem('userId', JSON.stringify(user.id));
               assignCartToUser(user.id, token)
             }
-            localStorage.setItem('token', token);
             setShowLoginModal(false)
           }}
         />

@@ -47,11 +47,14 @@
       "target": "api::amount-off-order.amount-off-order",
       "mappedBy": "promotion"
     },
-    "buy_x_get_y": {
+    "usageCount": {
+      "type": "integer"
+    },
+    "buy_x_get_ies": {
       "type": "relation",
-      "relation": "oneToMany",
+      "relation": "manyToMany",
       "target": "api::buy-x-get-y.buy-x-get-y",
-      "mappedBy": "promotion"
+      "mappedBy": "promotions"
     }
   }
 }
