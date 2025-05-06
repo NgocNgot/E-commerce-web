@@ -78,7 +78,18 @@ export default function CartPage() {
     const price = item.isGift ? 0 : (promotions && amountOffProducts ? calculateDiscountedPrice(item as Product, promotions, amountOffProducts).discountedPrice : item.pricing.price) || 0;
     return total + price * item.quantity;
   }, 0);
-
+  const handleGoToSubscription = () => {
+    const cartItemsWithTotal = cart.map(item => {
+      const price = item.isGift ? 0 : (promotions && amountOffProducts ? calculateDiscountedPrice(item as Product, promotions, amountOffProducts).discountedPrice : item.pricing?.price) || 0;
+      return {
+        ...item,
+        totalItemPrice: price * item.quantity
+      };
+    });
+    localStorage.setItem("cart", JSON.stringify(cartItemsWithTotal));
+    localStorage.setItem("cartTotalPrice", JSON.stringify(totalPrice));
+    router.push("/checkout?isSubscription=true");
+  };
   const handleCheckout = () => {
     const cartItemsWithTotal = cart.map(item => {
       const price = item.isGift ? 0 : (promotions && amountOffProducts ? calculateDiscountedPrice(item as Product, promotions, amountOffProducts).discountedPrice : item.pricing?.price) || 0;
@@ -92,6 +103,7 @@ export default function CartPage() {
     localStorage.setItem("cartTotalPrice", JSON.stringify(totalPrice));
     router.push("/checkout");
   };
+
 
   return (
     <>
@@ -142,12 +154,21 @@ export default function CartPage() {
           })}
         </div>
         <div className="flex justify-between items-center mt-6 px-4">
-          {/* Check out */}
-          <button className="bg-rose-400 font-bold text-white py-2 px-8 rounded-full hover:bg-rose-500 w-1/3"
-            onClick={handleCheckout}
-          >
-            CHECK OUT
-          </button>
+          <div className="flex space-x-8">
+            <button
+              className="bg-rose-100 font-bold text-rose-500 py-2 px-4 rounded-full whitespace-nowrap hover:bg-rose-500 hover:text-white w-auto"
+              onClick={handleGoToSubscription}
+            >
+              GO TO SUBSCRIPTION
+            </button>
+            <button
+              className="bg-rose-400 font-bold text-white whitespace-nowrap py-2 px-8 rounded-full hover:bg-rose-500 w-auto"
+              onClick={handleCheckout}
+            >
+              CHECK OUT
+            </button>
+          </div>
+
           <div className="text-2xl font-bold pr-4">Subtotal: &nbsp; ${totalPrice}</div>
         </div>
       </div>

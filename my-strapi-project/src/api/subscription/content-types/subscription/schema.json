@@ -1,0 +1,61 @@
+{
+  "kind": "collectionType",
+  "collectionName": "subscriptions",
+  "info": {
+    "singularName": "subscription",
+    "pluralName": "subscriptions",
+    "displayName": "Subscription",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "users_permissions_users": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "subscription"
+    },
+    "orders": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::order.order",
+      "mappedBy": "subscription"
+    },
+    "frequencyType": {
+      "type": "enumeration",
+      "enum": [
+        "Week",
+        "Month"
+      ]
+    },
+    "frequencyInterval": {
+      "type": "integer",
+      "default": 0
+    },
+    "statusSubscription": {
+      "type": "enumeration",
+      "enum": [
+        "Pending",
+        "Inactive",
+        "Active",
+        "Failed",
+        "Cancelled",
+        "Expired"
+      ]
+    },
+    "payments": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::payment.payment",
+      "mappedBy": "subscription"
+    },
+    "confirmedAt": {
+      "type": "datetime"
+    },
+    "nextOrderDate": {
+      "type": "datetime"
+    }
+  }
+}

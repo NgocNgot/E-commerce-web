@@ -88,6 +88,15 @@
       "relation": "manyToMany",
       "target": "api::promotion.promotion",
       "mappedBy": "excludedUsers"
+    },
+    "subscription": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::subscription.subscription",
+      "inversedBy": "users_permissions_users"
+    },
+    "stripeCustomerId": {
+      "type": "string"
     }
   }
 }

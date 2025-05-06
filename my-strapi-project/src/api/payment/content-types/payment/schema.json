@@ -43,6 +43,15 @@
       "relation": "oneToOne",
       "target": "api::order.order",
       "inversedBy": "payment"
+    },
+    "subscription": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::subscription.subscription",
+      "inversedBy": "payments"
+    },
+    "paymentMethodId": {
+      "type": "string"
     }
   }
 }

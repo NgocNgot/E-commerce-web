@@ -2,6 +2,8 @@
 
 const stripePromise = loadStripe("pk_test_51R91vrPbbfCp8zjVn18peJqrR2xvL2Q28PV39fa8QBqXui9u47abRheE0tWjEUff53ryeo3GBR25UyzCl1ZDSgX5007KhHxUn7");
 import { use, useEffect, useState } from "react";
+import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -12,8 +14,11 @@ import { User } from "@/../types/users";
 import { fetchUserById } from "../../api/users";
 import ShippingMethods from "@/app/checkout/ShippingMethods";
 import { LineItem } from "@/../types/shipping";
+import { removeFromCartApi } from '../../api/carts';
 
 function Checkout() {
+    const searchParams = useSearchParams();
+    const [showSubscriptionOptions, setShowSubscriptionOptions] = useState(false);
     const [cart, setCart] = useState<any[]>([]); // Get cart
     const [userInfo, setUserInfo] = useState({
         name: "",
@@ -29,6 +34,7 @@ function Checkout() {
     const [useShippingAsBilling, setUseShippingAsBilling] = useState(true);
     const [cartTotalPrice, setCartTotalPrice] = useState<number | null>(null);
 
+    const router = useRouter();
     const stripe = useStripe();
     const elements = useElements();
 
@@ -40,7 +46,24 @@ function Checkout() {
     const [appliedVoucherCodeDisplay, setAppliedVoucherCodeDisplay] = useState<string>("");
     const [usedVoucher, setUsedVoucher] = useState<string | null>(null); // State to track used voucher
 
+    // Subscription options
+    const [subscriptionFrequencyType, setSubscriptionFrequencyType] = useState<string>("Week");
+    const [subscriptionFrequencyInterval, setSubscriptionFrequencyInterval] = useState<number>(1);
+    const handleFrequencyTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSubscriptionFrequencyType(e.target.value);
+        console.log("subscriptionFrequencyType đã thay đổi thành:", e.target.value);
+    };
+
+    const handleFrequencyIntervalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSubscriptionFrequencyInterval(parseInt(e.target.value));
+        console.log("subscriptionFrequencyInterval đã thay đổi thành:", parseInt(e.target.value));
+    };
     useEffect(() => {
+        const isSubscription = searchParams.get('isSubscription');
+        if (isSubscription === 'true') {
+            setShowSubscriptionOptions(true);
+        }
+
         const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
         setCart(storedCart);
 
@@ -65,7 +88,7 @@ function Checkout() {
         // useEffect of voucher
         fetchAvailableVouchers(userId);
 
-    }, []);
+    }, [searchParams]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.type === "checkbox") {
@@ -247,6 +270,39 @@ function Checkout() {
                 return;
             }
 
+            // Order data
+            const orderDataToSend = {
+                data: {
+                    users_permissions_user: { id: userId },
+                    totalPrice: ((cartTotalPrice || 0) + (shippingCost || 0) - (discountAmount || 0)).toFixed(2),
+                    name: userInfo.name,
+                    address: userInfo.address,
+                    city: userInfo.city,
+                    phone: userInfo.phone,
+                    email: userInfo.email,
+                    statusCheckout: "Pending",
+                    shipping: { id: selectedShippingMethodId }, // Adjust ID if needed
+                    shippingCost: shippingCost,
+
+                    discountAmount: discountAmount,
+                    voucherCode: appliedVoucherCodeDisplay,
+
+                    lineItems: cart.map((item) => ({
+                        product: { id: item.id },
+                        quantity: item.quantity,
+                        price: item.price,
+                        title: item.title,
+                        // Shipping need
+                        weight: item.weight,
+                        length: item.length,
+                        width: item.width,
+                        height: item.height,
+
+                        totalItemPrice: item.totalItemPrice,
+                    })),
+                },
+            };
+
             // Send cart data to the server to create an order
             const orderResponse = await fetch(
                 "http://localhost:1337/api/orders",
@@ -256,37 +312,7 @@ function Checkout() {
                         "Content-Type": "application/json",
                         Authorization: `Bearer ${token}`,
                     },
-                    body: JSON.stringify({
-                        data: {
-                            users_permissions_user: { id: userId },
-                            totalPrice: ((cartTotalPrice || 0) + (shippingCost || 0) - (discountAmount || 0)).toFixed(2),
-                            name: userInfo.name,
-                            address: userInfo.address,
-                            city: userInfo.city,
-                            phone: userInfo.phone,
-                            email: userInfo.email,
-                            statusCheckout: "Pending",
-                            shipping: { id: selectedShippingMethodId },
-                            shippingCost: shippingCost,
-
-                            discountAmount: discountAmount,
-                            voucherCode: appliedVoucherCodeDisplay,
-
-                            lineItems: cart.map((item) => ({
-                                product: { id: item.id },
-                                quantity: item.quantity,
-                                price: item.price,
-                                title: item.title,
-                                // Shipping need
-                                weight: item.weight,
-                                length: item.length,
-                                width: item.width,
-                                height: item.height,
-
-                                totalItemPrice: item.totalItemPrice,
-                            })),
-                        },
-                    }),
+                    body: JSON.stringify(orderDataToSend),
                 }
             );
 
@@ -299,44 +325,39 @@ function Checkout() {
 
             console.log("Order created:", orderData);
             const orderId = orderData.data.id; // Get order id from response
-            let finalOrderId = orderId - 1;
+            let initialOrderId = orderId - 1;
+            let subscriptionCreated = false;
+            const confirmedAt = new Date().toISOString(); // Temporarily set confirmedAt to current time
 
             // Wait for a few seconds to ensure the order is fully created
             setTimeout(async () => {
-                if (!stripe || !elements) {
-                    alert("Stripe is not loaded!");
-                    setLoading(false);
-                    return;
+                let paymentMethodId: string | null = null;
+                if (stripe && elements) {
+                    const cardElement = elements.getElement(CardElement);
+                    if (cardElement) {
+                        const { error: pmError, paymentMethod } =
+                            await stripe.createPaymentMethod({
+                                type: "card",
+                                card: cardElement,
+                                billing_details: {
+                                    name: userInfo.name,
+                                    email: userInfo.email,
+                                },
+                            });
+
+                        if (pmError) {
+                            console.error("Payment method creation failed:", pmError);
+                            alert(`Payment failed: ${pmError.message}`);
+                            setLoading(false);
+                            return;
+                        }
+                        console.log("Payment Method created:", paymentMethod);
+                        paymentMethodId = paymentMethod.id;
+                    }
                 }
-
-                const cardElement = elements.getElement(CardElement);
-                if (!cardElement) {
-                    alert("Card Element not found!");
-                    setLoading(false);
-                    return;
-                }
-
-                // Create PaymentMethod
-                const { error: pmError, paymentMethod } =
-                    await stripe.createPaymentMethod({
-                        type: "card",
-                        card: cardElement,
-                        billing_details: {
-                            name: userInfo.name,
-                            email: userInfo.email,
-                        },
-                    });
-
-                if (pmError) {
-                    console.error("Payment method creation failed:", pmError);
-                    alert(`Payment failed: ${pmError.message}`);
-                    setLoading(false);
-                    return;
-                }
-
-                console.log("Payment Method created:", paymentMethod);
 
                 const totalPriceInCents = Math.round(((cartTotalPrice || 0) + (typeof shippingCost === 'number' ? shippingCost : 0) - discountAmount) * 100);
+
                 // Create payment intent and link it with order
                 const paymentResponse = await fetch(
                     "http://localhost:1337/api/payments",
@@ -351,9 +372,10 @@ function Checkout() {
                                 amount: totalPriceInCents * 10,
                                 currency: "USD",
                                 users_permissions_user: { id: userId },
-                                order: { id: finalOrderId },
-                                paymentMethodId: paymentMethod.id,
+                                order: { id: initialOrderId },
+                                paymentMethodId: paymentMethodId,
                                 email: userInfo.email,
+                                statusPayment: showSubscriptionOptions ? "Pending" : "Succeeded", // Set status for subscription
                             },
                         }),
                     }
@@ -367,13 +389,89 @@ function Checkout() {
                     setLoading(false);
                     return;
                 }
+                const paymentId = paymentData.data.id - 1;
+                let nextOrderDate = null;
+                const confirmedDate = new Date(confirmedAt);
 
-                console.log("Payment Intent created:", paymentData);
-                alert("Payment successful!");
+                // Create Subscription if showSubscriptionOptions is true
+                if (showSubscriptionOptions && subscriptionFrequencyType && subscriptionFrequencyInterval) {
+                    let nextDate = new Date(confirmedDate);
+                    if (subscriptionFrequencyType === "Week") {
+                        const intervalInDays = 7 / subscriptionFrequencyInterval;
+                        nextDate.setDate(nextDate.getDate() + intervalInDays);
+                    } else if (subscriptionFrequencyType === "Month") {
+                        const firstOrderDayOfMonth = confirmedDate.getDate();
+                        const intervalInDays = Math.round(getNumberOfDaysInMonth(confirmedDate.getFullYear(), confirmedDate.getMonth()) / subscriptionFrequencyInterval);
+
+                        nextDate.setDate(firstOrderDayOfMonth + intervalInDays);
+
+                        // Handle cases where the calculated day exceeds the number of days in the month
+                        const daysInNextMonth = getNumberOfDaysInMonth(nextDate.getFullYear(), nextDate.getMonth());
+                        if (nextDate.getDate() > daysInNextMonth) {
+                            nextDate.setDate(daysInNextMonth);
+                        }
+                    }
+                    nextOrderDate = nextDate.toISOString();
+                    function getNumberOfDaysInMonth(year: number, month: number) {
+                        return new Date(year, month + 1, 0).getDate();
+                    }
+
+                    const subscriptionResponse = await fetch(
+                        "http://localhost:1337/api/subscriptions",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({
+                                data: {
+                                    users_permissions_users: { id: userId },
+                                    orders: { id: initialOrderId },
+                                    payments: { id: paymentId },
+                                    frequencyType: subscriptionFrequencyType,
+                                    frequencyInterval: subscriptionFrequencyInterval,
+                                    statusSubscription: "Pending",
+                                    confirmedAt: new Date().toISOString(), // Temporarily set confirmedAt to current time
+                                    nextOrderDate: nextOrderDate,
+                                },
+                            }),
+                        }
+                    );
+
+                    const subscriptionData = await subscriptionResponse.json();
+                    console.log("Subscription created:", subscriptionData);
+                    if (!subscriptionResponse.ok) {
+                        console.log("Failed to create subscription!");
+                        alert("Failed to create subscription!");
+                        setLoading(false);
+                        return;
+                    }
+                    console.log("Subscription created successfully!");
+                    subscriptionCreated = true;
+                }
+                localStorage.removeItem("cart");
+                localStorage.removeItem("cartTotalPrice");
+                setCart([]);
+                setAppliedVoucherCodeDisplay("");
+                setDiscountAmount(0);
+                setSelectedVoucher(null);
+                setVoucherCode("");
+                router.push("/");
+
+                if (showSubscriptionOptions) {
+                    if (subscriptionCreated) {
+                        alert("Payment successful!");
+                    } else {
+                        alert("Payment successful, but subscription creation failed!");
+                    }
+                } else {
+                    alert("Payment successful!");
+                }
+
                 // Update voucher usage count on Strapi
                 console.log("Attempting to update voucher usage count...");
                 if (appliedVoucherCodeDisplay && selectedVoucher?.promotion?.documentId) {
-
                     const updateVoucherResponse = await fetch(
                         `http://localhost:1337/api/promotions/${selectedVoucher.promotion.documentId}`,
                         {
@@ -395,13 +493,6 @@ function Checkout() {
                     } else {
                         console.log(`Voucher usage count updated successfully on the server. Status: ${updateVoucherResponse.status}`);
                     }
-
-                    localStorage.setItem("cart", "[]");
-                    setCart([]);
-                    setAppliedVoucherCodeDisplay("");
-                    setDiscountAmount(0);
-                    setSelectedVoucher(null);
-                    setVoucherCode("");
                 }
             }, 3000); // Delay 3 seconds to ensure order is created
         } catch (error) {
@@ -480,6 +571,44 @@ function Checkout() {
                                     />
                                 </div>
                             </div>
+
+                            {/* Subscription section */}
+                            {showSubscriptionOptions && (
+                                <div className="mb-8">
+                                    <h2 className="text-2xl font-bold mb-4">Subscription Options</h2>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label htmlFor="frequencyType" className="block text-gray-700 text-sm font-bold mb-2">
+                                                Frequency:
+                                            </label>
+                                            <select
+                                                id="frequencyType"
+                                                name="frequencyType"
+                                                className="w-full p-3 border rounded-xl shadow-sm focus:ring sm:text-sm"
+                                                value={subscriptionFrequencyType}
+                                                onChange={handleFrequencyTypeChange}
+                                            >
+                                                <option value="Week">Weekly</option>
+                                                <option value="Month">Monthly</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="frequencyInterval" className="block text-gray-700 text-sm font-bold mb-2">
+                                                Interval:
+                                            </label>
+                                            <input
+                                                type="number"
+                                                id="frequencyInterval"
+                                                name="frequencyInterval"
+                                                className="w-full p-3 border rounded-xl shadow-sm focus:ring focus:ring-indigo-200 focus:border-indigo-500 sm:text-sm"
+                                                min="1"
+                                                value={subscriptionFrequencyInterval}
+                                                onChange={handleFrequencyIntervalChange}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Voucher section*/}
                             <div className="mb-8">
@@ -652,6 +781,3 @@ export default function CheckoutPage() {
         </Elements>
     );
 }
-
-
-

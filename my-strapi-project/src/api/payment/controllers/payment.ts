@@ -13,11 +13,39 @@ export default factories.createCoreController(
     async create(ctx) {
       try {
         const { amount, paymentMethodId, ...rest } = ctx.request.body.data;
+        const { user } = ctx.state;
 
         if (!amount || !paymentMethodId) {
           return ctx.badRequest(
             "Missing required parameters (amount, paymentMethodId) for payment processing."
           );
+        }
+
+        let stripeCustomerId = user?.stripeCustomerId;
+
+        if (!stripeCustomerId && user?.id) {
+          try {
+            const customer = await stripe.customers.create({
+              email: user.email,
+              name: user.username,
+            });
+            stripeCustomerId = customer.id;
+            // save stripeCustomerId to User in Strapi
+            await strapi.entityService.update(
+              "plugin::users-permissions.user",
+              user.id,
+              {
+                data: {
+                  stripeCustomerId: stripeCustomerId,
+                },
+              }
+            );
+            console.log(
+              `stripeCustomerId created and saved for user ${user.id}: ${stripeCustomerId}`
+            );
+          } catch (error) {
+            console.error("Error creating and saving stripeCustomerId:", error);
+          }
         }
 
         const paymentIntent = await stripe.paymentIntents.create({
@@ -26,8 +54,24 @@ export default factories.createCoreController(
           payment_method: paymentMethodId,
           confirm: true,
           return_url: "http://localhost:3000/payment-success",
+          customer: stripeCustomerId,
         });
         console.log("PaymentIntent created:", paymentIntent);
+        if (
+          paymentIntent.status === "succeeded" &&
+          stripeCustomerId &&
+          paymentMethodId
+        ) {
+          try {
+            const paymentMethod = await stripe.paymentMethods.attach(
+              paymentMethodId,
+              { customer: stripeCustomerId }
+            );
+            console.log("PaymentMethod attached to Customer:", paymentMethod);
+          } catch (error) {
+            console.error("Error attaching PaymentMethod to Customer:", error);
+          }
+        }
 
         if (paymentIntent.status !== "succeeded") {
           return ctx.badRequest({
@@ -60,6 +104,7 @@ export default factories.createCoreController(
                     product: true,
                   },
                 },
+                subscriptions: true, // Populate trường subscriptions của Order
               },
             },
             users_permissions_user: true,
@@ -69,7 +114,7 @@ export default factories.createCoreController(
         if (!payment || !payment.order) {
           return ctx.notFound("Payment or order not found");
         }
-
+        // Send email confirmation
         try {
           const order = payment.order;
           const orderId = order.documentId;
@@ -87,30 +132,30 @@ export default factories.createCoreController(
 
           let emailHTML = fs.readFileSync(emailTemplatePath, "utf8");
           let orderItemsHTML = `
-              <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                  <thead>
-                      <tr>
-                          <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Product</th>
-                          <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Quantity</th>
-                          <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Price</th>
-                          <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Item Total</th>
-                      </tr>
-                  </thead>
-                  <tbody>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+              <thead>
+                <tr>
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Product</th>
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Quantity</th>
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Price</th>
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Item Total</th>
+                </tr>
+              </thead>
+              <tbody>
           `;
           order.lineItems.forEach((item) => {
             orderItemsHTML += `
               <tr>
-                  <td style="border: 1px solid #ddd; padding: 8px;">${item.title || "Not found name Product"}</td>
-                  <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
-                  <td style="border: 1px solid #ddd; padding: 8px;">${item.totalItemPrice} USD</td>
-                  <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity * item.totalItemPrice} USD</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.title || "Not found name Product"}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.totalItemPrice} USD</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity * item.totalItemPrice} USD</td>
               </tr>
             `;
           });
           orderItemsHTML += `
-                  </tbody>
-              </table>
+              </tbody>
+            </table>
           `;
           // Replace placeholders in the email template with actual data
           emailHTML = emailHTML.replace("{{orderId}}", orderId);
