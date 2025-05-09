@@ -345,6 +345,7 @@ function Checkout() {
                                 },
                             });
 
+
                         if (pmError) {
                             console.error("Payment method creation failed:", pmError);
                             alert(`Payment failed: ${pmError.message}`);
@@ -376,6 +377,9 @@ function Checkout() {
                                 paymentMethodId: paymentMethodId,
                                 email: userInfo.email,
                                 statusPayment: showSubscriptionOptions ? "Pending" : "Succeeded", // Set status for subscription
+                                isSubscriptionPayment: showSubscriptionOptions,
+                                subscriptionFrequencyType: showSubscriptionOptions ? subscriptionFrequencyType : null, // Gửi kèm thông tin này
+                                subscriptionFrequencyInterval: showSubscriptionOptions ? subscriptionFrequencyInterval : null, // Gửi kèm thông tin này
                             },
                         }),
                     }
@@ -438,6 +442,7 @@ function Checkout() {
                             }),
                         }
                     );
+
 
                     const subscriptionData = await subscriptionResponse.json();
                     console.log("Subscription created:", subscriptionData);

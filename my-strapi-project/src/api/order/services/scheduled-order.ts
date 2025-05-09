@@ -54,9 +54,35 @@ export default ({ strapi }: { strapi: any }) => ({
                 new Date(a.createdAt).getTime() -
                 new Date(b.createdAt).getTime()
             )[0];
+            let paymentMethodIdFromFirstPayment = null;
 
-            const paymentMethodIdFromFirstPayment =
-              firstPayment?.paymentMethodId;
+            if (firstPayment?.paymentMethodId) {
+              try {
+                const pm = await stripe.paymentMethods.retrieve(
+                  firstPayment.paymentMethodId
+                );
+
+                if (pm.customer === user.stripeCustomerId) {
+                  paymentMethodIdFromFirstPayment = pm.id;
+                } else {
+                  console.warn(
+                    `PaymentMethod ${pm.id} is not attached to customer ${user.stripeCustomerId}, skipping.`
+                  );
+                }
+              } catch (err) {
+                console.warn(
+                  `Failed to retrieve payment method ${firstPayment.paymentMethodId}`,
+                  err
+                );
+                paymentMethodIdFromFirstPayment = null;
+              }
+            }
+            if (
+              !paymentMethodIdFromFirstPayment &&
+              user.stripePaymentMethodId
+            ) {
+              paymentMethodIdFromFirstPayment = user.stripePaymentMethodId;
+            }
 
             if (paymentMethodIdFromFirstPayment) {
               const newOrderData = {
@@ -127,13 +153,12 @@ export default ({ strapi }: { strapi: any }) => ({
                       ? "Succeeded"
                       : "Failed";
 
-                  // Tạo Payment entity
                   const createdPayment = await strapi.entityService.create(
                     "api::payment.payment",
                     {
                       data: {
                         amount: createdOrder.totalPrice,
-                        currency: "usd",
+                        currency: "USD",
                         users_permissions_user: user.id,
                         order: createdOrder.id,
                         paymentIntentId: paymentIntent.id,
@@ -187,7 +212,7 @@ export default ({ strapi }: { strapi: any }) => ({
                 subscription.id,
                 {
                   data: {
-                    statusSubscription: "ErrorNoPaymentMethodIdInFirstPayment",
+                    statusSubscription: "Failed",
                   },
                 }
               );

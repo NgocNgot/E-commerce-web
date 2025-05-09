@@ -12,7 +12,14 @@ export default factories.createCoreController(
   ({ strapi }) => ({
     async create(ctx) {
       try {
-        const { amount, paymentMethodId, ...rest } = ctx.request.body.data;
+        const {
+          amount,
+          paymentMethodId,
+          isSubscriptionPayment,
+          subscriptionFrequencyType,
+          subscriptionFrequencyInterval,
+          ...rest
+        } = ctx.request.body.data;
         const { user } = ctx.state;
 
         if (!amount || !paymentMethodId) {
@@ -30,7 +37,7 @@ export default factories.createCoreController(
               name: user.username,
             });
             stripeCustomerId = customer.id;
-            // save stripeCustomerId to User in Strapi
+            // Save stripeCustomerId to User in Strapi
             await strapi.entityService.update(
               "plugin::users-permissions.user",
               user.id,
@@ -55,23 +62,9 @@ export default factories.createCoreController(
           confirm: true,
           return_url: "http://localhost:3000/payment-success",
           customer: stripeCustomerId,
+          setup_future_usage: "off_session",
         });
         console.log("PaymentIntent created:", paymentIntent);
-        if (
-          paymentIntent.status === "succeeded" &&
-          stripeCustomerId &&
-          paymentMethodId
-        ) {
-          try {
-            const paymentMethod = await stripe.paymentMethods.attach(
-              paymentMethodId,
-              { customer: stripeCustomerId }
-            );
-            console.log("PaymentMethod attached to Customer:", paymentMethod);
-          } catch (error) {
-            console.error("Error attaching PaymentMethod to Customer:", error);
-          }
-        }
 
         if (paymentIntent.status !== "succeeded") {
           return ctx.badRequest({
@@ -81,8 +74,8 @@ export default factories.createCoreController(
           });
         }
 
-        // Payment succeeded, create a new entry in the database
-        const entry = await strapi.entityService.create(
+        // Create Payment entry
+        const paymentEntry = await strapi.entityService.create(
           "api::payment.payment",
           {
             data: {
@@ -94,40 +87,109 @@ export default factories.createCoreController(
             },
           }
         );
-        const payment = await strapi.db.query("api::payment.payment").findOne({
-          where: { id: entry.id },
-          populate: {
-            order: {
-              populate: {
-                lineItems: {
-                  populate: {
-                    product: true,
-                  },
-                },
-                subscriptions: true, // Populate trường subscriptions của Order
-              },
-            },
-            users_permissions_user: true,
-          },
+        // Get Order
+        const order = await strapi.db.query("api::order.order").findOne({
+          where: { id: rest.order.id },
         });
+        if (!order) {
+          return ctx.notFound("Order not found");
+        }
 
-        if (!payment || !payment.order) {
+        // Create Subscription
+        let subscriptionEntry = null;
+        if (
+          isSubscriptionPayment &&
+          subscriptionFrequencyType &&
+          subscriptionFrequencyInterval
+        ) {
+          const confirmedAt = new Date();
+          let nextOrderDate = new Date(confirmedAt);
+
+          if (subscriptionFrequencyType === "Week") {
+            nextOrderDate.setDate(
+              nextOrderDate.getDate() +
+                7 / parseInt(subscriptionFrequencyInterval)
+            );
+          } else if (subscriptionFrequencyType === "Month") {
+            const intervalInDays = Math.round(
+              getNumberOfDaysInMonth(
+                confirmedAt.getFullYear(),
+                confirmedAt.getMonth()
+              ) / parseInt(subscriptionFrequencyInterval)
+            );
+            nextOrderDate.setDate(confirmedAt.getDate() + intervalInDays);
+            const daysInNextMonth = getNumberOfDaysInMonth(
+              nextOrderDate.getFullYear(),
+              nextOrderDate.getMonth()
+            );
+            if (nextOrderDate.getDate() > daysInNextMonth) {
+              nextOrderDate.setDate(daysInNextMonth);
+            }
+          }
+          subscriptionEntry = await strapi.entityService.create(
+            "api::subscription.subscription",
+            {
+              data: {
+                users_permissions_users: { id: user.id },
+                orders: { id: order.id },
+                payments: { id: paymentEntry.id },
+                frequencyType: subscriptionFrequencyType,
+                frequencyInterval: parseInt(subscriptionFrequencyInterval),
+                statusSubscription: "Pending",
+                confirmedAt: confirmedAt.toISOString(),
+                nextOrderDate: nextOrderDate.toISOString(),
+              },
+            }
+          );
+          // Update Order with Subscription
+          await strapi.entityService.update("api::order.order", order.id, {
+            data: {
+              subscription: { id: subscriptionEntry.id },
+            },
+          });
+        }
+
+        // Get Payment with populated data
+        const finalPayment = await strapi.db
+          .query("api::payment.payment")
+          .findOne({
+            where: { id: paymentEntry.id },
+            populate: {
+              users_permissions_user: true,
+              order: {
+                populate: {
+                  lineItems: {
+                    populate: {
+                      product: true,
+                    },
+                  },
+                  subscription: true,
+                },
+              },
+              subscription: true,
+            },
+          });
+        console.log("-------Final Payment:", finalPayment);
+
+        if (!finalPayment || !finalPayment.order) {
           return ctx.notFound("Payment or order not found");
         }
-        // Send email confirmation
+
         try {
-          const order = payment.order;
-          const orderId = order.documentId;
-          const customerName = payment.users_permissions_user.username;
-          const totalPrice = order.totalPrice;
-          const discountAmount = order.discountAmount || 0;
-          const recipientEmail = order.email;
-          const shippingCost = order.shippingCost || 0;
+          const orderData = finalPayment.order;
+          const orderId = orderData.documentId;
+          const customerName = finalPayment.users_permissions_user.username;
+          const totalPrice = orderData.totalPrice;
+          const discountAmount = orderData.discountAmount || 0;
+          const recipientEmail = orderData.email;
+          const shippingCost = orderData.shippingCost || 0;
 
           const emailTemplatePath = path.join(
             process.cwd(),
             "emails",
-            "order-confirmation.html"
+            isSubscriptionPayment
+              ? "subscription-confirmation.html"
+              : "order-confirmation.html"
           );
 
           let emailHTML = fs.readFileSync(emailTemplatePath, "utf8");
@@ -143,7 +205,7 @@ export default factories.createCoreController(
               </thead>
               <tbody>
           `;
-          order.lineItems.forEach((item) => {
+          orderData.lineItems.forEach((item) => {
             orderItemsHTML += `
               <tr>
                 <td style="border: 1px solid #ddd; padding: 8px;">${item.title || "Not found name Product"}</td>
@@ -157,37 +219,61 @@ export default factories.createCoreController(
               </tbody>
             </table>
           `;
-          // Replace placeholders in the email template with actual data
-          emailHTML = emailHTML.replace("{{orderId}}", orderId);
-          emailHTML = emailHTML.replace("{{customerName}}", customerName);
-          emailHTML = emailHTML.replace("{{orderItems}}", orderItemsHTML);
-          emailHTML = emailHTML.replace(
-            "{{shippingCost}}",
-            shippingCost.toFixed(2) + " USD"
-          );
-          emailHTML = emailHTML.replace(
-            "{{discountAmount}}",
-            discountAmount.toFixed(2) + " USD"
-          );
-          emailHTML = emailHTML.replace(
-            "{{totalPrice}}",
-            totalPrice.toFixed(2) + " USD"
-          );
-          emailHTML = emailHTML.replace(
-            "{{orderDate}}",
-            new Date(order.createdAt).toLocaleDateString("vi-VN")
-          );
-          emailHTML = emailHTML.replace(
-            "{{shippingAddress}}",
-            `${order.address}, ${order.city}`
-          );
-          emailHTML = emailHTML.replace("{{phoneNumber}}", order.phone);
-          emailHTML = emailHTML.replace("{{name}}", order.name);
+          if (isSubscriptionPayment) {
+            const subscription = finalPayment.subscription;
+
+            emailHTML = emailHTML
+              .replace("{{subscriptionId}}", subscription.documentId)
+              .replace("{{customerName}}", customerName)
+              .replace("{{orderItems}}", orderItemsHTML)
+              .replace("{{frequencyType}}", subscription.frequencyType)
+              .replace("{{frequencyInterval}}", subscription.frequencyInterval)
+              .replace(
+                "{{firstOrderDate}}",
+                new Date(subscription.createdAt).toLocaleDateString("vi-VN")
+              )
+              .replace(
+                "{{nextOrderDate}}",
+                new Date(subscription.nextOrderDate).toLocaleDateString("vi-VN")
+              )
+              .replace(
+                "{{confirmationLink}}",
+                `http://localhost:3000/confirm-subscription/${subscription.documentId}`
+              )
+              .replace("{{name}}", orderData.name)
+              .replace(
+                "{{shippingAddress}}",
+                `${orderData.address}, ${orderData.city}`
+              )
+              .replace("{{phoneNumber}}", orderData.phone);
+          } else {
+            emailHTML = emailHTML
+              .replace("{{orderId}}", orderId)
+              .replace("{{customerName}}", customerName)
+              .replace("{{orderItems}}", orderItemsHTML)
+              .replace("{{shippingCost}}", shippingCost.toFixed(2) + " USD")
+              .replace("{{discountAmount}}", discountAmount.toFixed(2) + " USD")
+              .replace("{{totalPrice}}", totalPrice.toFixed(2) + " USD")
+              .replace(
+                "{{orderDate}}",
+                new Date(orderData.createdAt).toLocaleDateString("vi-VN")
+              )
+              .replace(
+                "{{shippingAddress}}",
+                `${orderData.address}, ${orderData.city}`
+              )
+              .replace("{{phoneNumber}}", orderData.phone)
+              .replace("{{name}}", orderData.name);
+          }
+
           // Send email confirmation
           await strapi.plugins.email.services.email.send({
             to: recipientEmail,
             from: "nbichngoc3904@gmail.com",
-            subject: `Confirmation of Order #${orderId}`,
+            subject:
+              isSubscriptionPayment && finalPayment.order.subscription
+                ? `Subscription Confirmation #${finalPayment.order.subscription.documentId || "N/A"}`
+                : `Confirmation of Order #${orderId}`,
             html: emailHTML,
           });
 
@@ -195,16 +281,15 @@ export default factories.createCoreController(
           ctx.send({
             success: true,
             paymentIntent,
-            data: entry,
+            data: finalPayment,
             clientSecret: paymentIntent.client_secret,
           });
         } catch (error) {
           console.log("Error sending email:", error);
-          // Return the clientSecret even if email fails (for payment confirmation on frontend)
           ctx.send({
             success: true,
             paymentIntent,
-            data: entry,
+            data: finalPayment,
             clientSecret: paymentIntent.client_secret,
             message: "Payment successful, but email could not be sent.",
           });
@@ -218,3 +303,7 @@ export default factories.createCoreController(
     },
   })
 );
+
+function getNumberOfDaysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
