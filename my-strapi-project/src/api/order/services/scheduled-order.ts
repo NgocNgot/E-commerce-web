@@ -1,4 +1,6 @@
 import cron from "node-cron";
+import path from "path";
+import fs from "fs";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -182,6 +184,119 @@ export default ({ strapi }: { strapi: any }) => ({
                         },
                       }
                     );
+                    // Send order confirmation email
+                    if (createdOrder) {
+                      let populatedOrder;
+                      try {
+                        populatedOrder = await strapi.entityService.findOne(
+                          "api::order.order",
+                          createdOrder.id,
+                          {
+                            populate: {
+                              shipping: true,
+                              users_permissions_user: true,
+                            },
+                          }
+                        );
+
+                        if (populatedOrder) {
+                          const recipientEmail = populatedOrder.email;
+                          const customerName =
+                            populatedOrder.users_permissions_user?.username;
+                          const orderId = createdOrder.id;
+                          const totalPrice = populatedOrder.totalPrice;
+                          const discountAmount =
+                            populatedOrder.discountAmount || 0;
+                          const shippingCost = populatedOrder.shippingCost || 0;
+                          const lineItems = createdOrder.lineItems;
+                          const emailTemplatePath = path.join(
+                            process.cwd(),
+                            "emails",
+                            "order-confirmation.html"
+                          );
+                          let emailHTML = fs.readFileSync(
+                            emailTemplatePath,
+                            "utf8"
+                          );
+                          let orderItemsHTML = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                    <thead>
+                        <tr>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Product</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Quantity</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Price</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Item Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+                          lineItems.forEach((item) => {
+                            orderItemsHTML += `
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${item.title || "Not found name Product"}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${item.totalItemPrice} USD</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity * item.totalItemPrice} USD</td>
+                    </tr>
+                `;
+                          });
+                          orderItemsHTML += `
+                    </tbody>
+                </table>
+            `;
+
+                          emailHTML = emailHTML
+                            .replace("{{orderId}}", orderId)
+                            .replace("{{customerName}}", customerName)
+                            .replace("{{orderItems}}", orderItemsHTML)
+                            .replace(
+                              "{{shippingCost}}",
+                              shippingCost?.toFixed(2) + " USD"
+                            )
+                            .replace(
+                              "{{discountAmount}}",
+                              discountAmount?.toFixed(2) + " USD"
+                            )
+                            .replace(
+                              "{{totalPrice}}",
+                              totalPrice?.toFixed(2) + " USD"
+                            )
+                            .replace(
+                              "{{orderDate}}",
+                              new Date(
+                                createdOrder.createdAt
+                              ).toLocaleDateString("vi-VN")
+                            )
+                            .replace(
+                              "{{shippingAddress}}",
+                              `${populatedOrder?.address}, ${populatedOrder?.city}`
+                            )
+                            .replace("{{phoneNumber}}", populatedOrder?.phone)
+                            .replace("{{name}}", populatedOrder?.name);
+
+                          if (recipientEmail && customerName) {
+                            await strapi.plugins.email.services.email.send({
+                              to: recipientEmail,
+                              from: "nbichngoc3904@gmail.com",
+                              subject: `Confirmation of Order #${orderId}`,
+                              html: emailHTML,
+                            });
+                            console.log(
+                              `Email confirmation sent for Order ID: ${createdOrder.id}`
+                            );
+                          } else {
+                            console.warn(
+                              `Could not send email for Order ID ${orderId} due to missing recipient email or username.`
+                            );
+                          }
+                        }
+                      } catch (error) {
+                        console.error(
+                          "Error sending order confirmation email:",
+                          error
+                        );
+                      }
+                    }
                   } else {
                     await strapi.entityService.update(
                       "api::subscription.subscription",

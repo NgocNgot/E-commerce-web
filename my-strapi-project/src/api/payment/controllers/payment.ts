@@ -270,10 +270,9 @@ export default factories.createCoreController(
           await strapi.plugins.email.services.email.send({
             to: recipientEmail,
             from: "nbichngoc3904@gmail.com",
-            subject:
-              isSubscriptionPayment && finalPayment.order.subscription
-                ? `Subscription Confirmation #${finalPayment.order.subscription.documentId || "N/A"}`
-                : `Confirmation of Order #${orderId}`,
+            subject: isSubscriptionPayment
+              ? `Subscription Confirmation #${orderId}`
+              : `Confirmation of Order #${orderId}`,
             html: emailHTML,
           });
 
