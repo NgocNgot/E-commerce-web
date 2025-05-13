@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { fetchPromotions, fetchAmountOffProducts, calculateDiscountedPrice } from "@/api/promotions";
 import { PromotionResponse, AmountOffProductResponse } from "../../../types/promotion";
 import { Product } from "../../../types/product";
+import { it } from "node:test";
 
 export default function CartPage() {
   const [cart, setCart] = useState<any[]>([]);
@@ -83,7 +84,8 @@ export default function CartPage() {
       const price = item.isGift ? 0 : (promotions && amountOffProducts ? calculateDiscountedPrice(item as Product, promotions, amountOffProducts).discountedPrice : item.pricing?.price) || 0;
       return {
         ...item,
-        totalItemPrice: price * item.quantity
+        totalItemPrice: price * item.quantity,
+        itemPrice: price
       };
     });
     localStorage.setItem("cart", JSON.stringify(cartItemsWithTotal));
@@ -95,7 +97,8 @@ export default function CartPage() {
       const price = item.isGift ? 0 : (promotions && amountOffProducts ? calculateDiscountedPrice(item as Product, promotions, amountOffProducts).discountedPrice : item.pricing?.price) || 0;
       return {
         ...item,
-        totalItemPrice: price * item.quantity
+        totalItemPrice: price * item.quantity,
+        itemPrice: price
       };
     });
 

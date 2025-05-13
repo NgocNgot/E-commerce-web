@@ -178,6 +178,7 @@ export default factories.createCoreController(
         try {
           const orderData = finalPayment.order;
           const orderId = orderData.documentId;
+          const subscriptionId = orderData.subscription?.documentId;
           const customerName = finalPayment.users_permissions_user.username;
           const totalPrice = orderData.totalPrice;
           const discountAmount = orderData.discountAmount || 0;
@@ -210,8 +211,8 @@ export default factories.createCoreController(
               <tr>
                 <td style="border: 1px solid #ddd; padding: 8px;">${item.title || "Not found name Product"}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${item.totalItemPrice} USD</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity * item.totalItemPrice} USD</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.itemPrice} USD</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity * item.itemPrice} USD</td>
               </tr>
             `;
           });
@@ -219,11 +220,13 @@ export default factories.createCoreController(
               </tbody>
             </table>
           `;
+          console.log(
+            "--------isSubscriptionPayment nè",
+            isSubscriptionPayment
+          );
           if (isSubscriptionPayment) {
             const subscription = finalPayment.subscription;
-
             emailHTML = emailHTML
-              .replace("{{subscriptionId}}", subscription.documentId)
               .replace("{{customerName}}", customerName)
               .replace("{{orderItems}}", orderItemsHTML)
               .replace("{{frequencyType}}", subscription.frequencyType)
@@ -240,13 +243,17 @@ export default factories.createCoreController(
                 "{{confirmationLink}}",
                 `http://localhost:3000/confirm-subscription/${subscription.documentId}`
               )
-              .replace("{{name}}", orderData.name)
+              .replace("{{shippingCost}}", shippingCost.toFixed(2) + " USD")
+              .replace("{{discountAmount}}", discountAmount.toFixed(2) + " USD")
+              .replace("{{totalPrice}}", totalPrice.toFixed(2) + " USD")
               .replace(
                 "{{shippingAddress}}",
                 `${orderData.address}, ${orderData.city}`
               )
-              .replace("{{phoneNumber}}", orderData.phone);
+              .replace("{{phoneNumber}}", orderData.phone)
+              .replace("{{name}}", orderData.name);
           } else {
+            console.log("--------isSubscriptionPayment là false nè-------");
             emailHTML = emailHTML
               .replace("{{orderId}}", orderId)
               .replace("{{customerName}}", customerName)
@@ -271,7 +278,7 @@ export default factories.createCoreController(
             to: recipientEmail,
             from: "nbichngoc3904@gmail.com",
             subject: isSubscriptionPayment
-              ? `Subscription Confirmation #${orderId}`
+              ? `Subscription Confirmation #${subscriptionId}`
               : `Confirmation of Order #${orderId}`,
             html: emailHTML,
           });

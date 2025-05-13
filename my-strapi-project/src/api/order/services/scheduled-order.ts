@@ -87,6 +87,30 @@ export default ({ strapi }: { strapi: any }) => ({
             }
 
             if (paymentMethodIdFromFirstPayment) {
+              let currentDiscountAmount = firstOrder.discountAmount || 0;
+              let currentVoucherCode = firstOrder.voucherCode;
+
+              if (firstOrder.voucherCode) {
+                const promotion = await strapi
+                  .query("api::promotion.promotion")
+                  .findOne({
+                    where: { code: firstOrder.voucherCode },
+                  });
+                if (promotion && promotion.publishedAt) {
+                  const endDate = new Date(promotion.endDate);
+                  if (nextOrderDate > endDate) {
+                    currentDiscountAmount = 0;
+                    currentVoucherCode = null;
+                  }
+                } else {
+                  currentDiscountAmount = 0;
+                  currentVoucherCode = null;
+                  console.warn(
+                    `Voucher ${firstOrder.voucherCode} is invalid. Discount set to 0.`
+                  );
+                }
+              }
+
               const newOrderData = {
                 data: {
                   users_permissions_user:
@@ -102,8 +126,8 @@ export default ({ strapi }: { strapi: any }) => ({
                     ? { id: firstOrder.shipping.id }
                     : null,
                   shippingCost: firstOrder.shippingCost,
-                  discountAmount: firstOrder.discountAmount,
-                  voucherCode: firstOrder.voucherCode,
+                  discountAmount: currentDiscountAmount,
+                  voucherCode: currentVoucherCode,
                   lineItems: firstOrder.lineItems.map((item) => ({
                     product: { id: item.product.id },
                     quantity: item.quantity,
@@ -113,11 +137,20 @@ export default ({ strapi }: { strapi: any }) => ({
                     length: item.length,
                     width: item.width,
                     height: item.height,
+                    itemPrice: item.itemPrice,
                     totalItemPrice: item.totalItemPrice,
                   })),
                   subscriptions: [subscription.id],
                 },
               };
+
+              let calculatedTotalPrice = newOrderData.data.lineItems.reduce(
+                (sum, item) => sum + item.totalItemPrice,
+                0
+              );
+              calculatedTotalPrice += newOrderData.data.shippingCost || 0;
+              calculatedTotalPrice -= currentDiscountAmount;
+              newOrderData.data.totalPrice = calculatedTotalPrice;
 
               const createdOrder = await strapi.entityService.create(
                 "api::order.order",
@@ -184,111 +217,121 @@ export default ({ strapi }: { strapi: any }) => ({
                         },
                       }
                     );
+                    const updatedSubscription =
+                      await strapi.entityService.findOne(
+                        "api::subscription.subscription",
+                        subscription.id
+                      );
                     // Send order confirmation email
                     if (createdOrder) {
-                      let populatedOrder;
                       try {
-                        populatedOrder = await strapi.entityService.findOne(
-                          "api::order.order",
-                          createdOrder.id,
-                          {
-                            populate: {
-                              shipping: true,
-                              users_permissions_user: true,
-                            },
-                          }
+                        const recipientEmail = createdOrder.email;
+                        const customerName = user?.username;
+                        const orderId = createdOrder.documentId;
+                        const subscriptionId = subscription.documentId;
+                        const totalPrice = createdOrder.totalPrice;
+                        const discountAmount = createdOrder.discountAmount || 0;
+                        const shippingCost = createdOrder.shippingCost || 0;
+                        const lineItems = createdOrder.lineItems;
+                        const frequencyType = subscription.frequencyType;
+                        const frequencyInterval =
+                          subscription.frequencyInterval;
+                        const firstOrderDate = subscription.createdAt;
+                        const nextOrderDate = updatedSubscription.nextOrderDate;
+                        const shippingAddress = `${createdOrder?.address}, ${createdOrder?.city}`;
+                        const phoneNumber = createdOrder?.phone;
+                        const name = createdOrder?.name;
+
+                        const emailTemplatePath = path.join(
+                          process.cwd(),
+                          "emails",
+                          "subscription-confirmation.html"
                         );
-
-                        if (populatedOrder) {
-                          const recipientEmail = populatedOrder.email;
-                          const customerName =
-                            populatedOrder.users_permissions_user?.username;
-                          const orderId = createdOrder.id;
-                          const totalPrice = populatedOrder.totalPrice;
-                          const discountAmount =
-                            populatedOrder.discountAmount || 0;
-                          const shippingCost = populatedOrder.shippingCost || 0;
-                          const lineItems = createdOrder.lineItems;
-                          const emailTemplatePath = path.join(
-                            process.cwd(),
-                            "emails",
-                            "order-confirmation.html"
-                          );
-                          let emailHTML = fs.readFileSync(
-                            emailTemplatePath,
-                            "utf8"
-                          );
-                          let orderItemsHTML = `
-                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                    <thead>
-                        <tr>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Product</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Quantity</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Price</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Item Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-                          lineItems.forEach((item) => {
-                            orderItemsHTML += `
-                    <tr>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${item.title || "Not found name Product"}</td>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${item.totalItemPrice} USD</td>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity * item.totalItemPrice} USD</td>
-                    </tr>
-                `;
-                          });
+                        let emailHTML = fs.readFileSync(
+                          emailTemplatePath,
+                          "utf8"
+                        );
+                        let orderItemsHTML = `
+                          <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                            <thead>
+                              <tr>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Product</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Quantity</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Price</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Item Total</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                        `;
+                        lineItems.forEach((item) => {
                           orderItemsHTML += `
-                    </tbody>
-                </table>
-            `;
+                            <tr>
+                              <td style="border: 1px solid #ddd; padding: 8px;">${item.title || "Not found name Product"}</td>
+                              <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
+                              <td style="border: 1px solid #ddd; padding: 8px;">${item.itemPrice} USD</td>
+                              <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity * item.itemPrice} USD</td>
+                            </tr>
+                          `;
+                        });
+                        orderItemsHTML += `
+                              </tbody>
+                            </table>
+                        `;
 
-                          emailHTML = emailHTML
-                            .replace("{{orderId}}", orderId)
-                            .replace("{{customerName}}", customerName)
-                            .replace("{{orderItems}}", orderItemsHTML)
-                            .replace(
-                              "{{shippingCost}}",
-                              shippingCost?.toFixed(2) + " USD"
+                        emailHTML = emailHTML
+                          .replace("{{orderId}}", orderId)
+                          .replace("{{customerName}}", customerName)
+                          .replace("{{orderItems}}", orderItemsHTML)
+                          .replace("{{frequencyType}}", frequencyType)
+                          .replace("{{frequencyInterval}}", frequencyInterval)
+                          .replace(
+                            "{{firstOrderDate}}",
+                            new Date(firstOrderDate).toLocaleDateString("vi-VN")
+                          )
+                          .replace(
+                            "{{nextOrderDate}}",
+                            new Date(nextOrderDate).toLocaleDateString("vi-VN")
+                          )
+                          .replace(
+                            "{{confirmationLink}}",
+                            `http://localhost:3000/confirm-subscription/${subscriptionId}`
+                          )
+                          .replace(
+                            "{{shippingCost}}",
+                            shippingCost?.toFixed(2) + " USD"
+                          )
+                          .replace(
+                            "{{discountAmount}}",
+                            discountAmount?.toFixed(2) + " USD"
+                          )
+                          .replace(
+                            "{{totalPrice}}",
+                            totalPrice?.toFixed(2) + " USD"
+                          )
+                          .replace(
+                            "{{orderDate}}",
+                            new Date(createdOrder.createdAt).toLocaleDateString(
+                              "vi-VN"
                             )
-                            .replace(
-                              "{{discountAmount}}",
-                              discountAmount?.toFixed(2) + " USD"
-                            )
-                            .replace(
-                              "{{totalPrice}}",
-                              totalPrice?.toFixed(2) + " USD"
-                            )
-                            .replace(
-                              "{{orderDate}}",
-                              new Date(
-                                createdOrder.createdAt
-                              ).toLocaleDateString("vi-VN")
-                            )
-                            .replace(
-                              "{{shippingAddress}}",
-                              `${populatedOrder?.address}, ${populatedOrder?.city}`
-                            )
-                            .replace("{{phoneNumber}}", populatedOrder?.phone)
-                            .replace("{{name}}", populatedOrder?.name);
+                          )
+                          .replace("{{shippingAddress}}", shippingAddress)
+                          .replace("{{phoneNumber}}", phoneNumber)
+                          .replace("{{name}}", name);
 
-                          if (recipientEmail && customerName) {
-                            await strapi.plugins.email.services.email.send({
-                              to: recipientEmail,
-                              from: "nbichngoc3904@gmail.com",
-                              subject: `Confirmation of Order #${orderId}`,
-                              html: emailHTML,
-                            });
-                            console.log(
-                              `Email confirmation sent for Order ID: ${createdOrder.id}`
-                            );
-                          } else {
-                            console.warn(
-                              `Could not send email for Order ID ${orderId} due to missing recipient email or username.`
-                            );
-                          }
+                        if (recipientEmail && customerName) {
+                          await strapi.plugins.email.services.email.send({
+                            to: recipientEmail,
+                            from: "nbichngoc3904@gmail.com",
+                            subject: `Confirmation of Subscription Order #${subscriptionId}`,
+                            html: emailHTML,
+                          });
+                          console.log(
+                            `Email confirmation sent for Order ID: ${createdOrder.documentId}`
+                          );
+                        } else {
+                          console.warn(
+                            `Could not send email for Order ID ${orderId} due to missing recipient email or username.`
+                          );
                         }
                       } catch (error) {
                         console.error(

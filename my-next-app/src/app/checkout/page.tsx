@@ -298,6 +298,7 @@ function Checkout() {
                         width: item.width,
                         height: item.height,
 
+                        itemPrice: item.itemPrice,
                         totalItemPrice: item.totalItemPrice,
                     })),
                 },

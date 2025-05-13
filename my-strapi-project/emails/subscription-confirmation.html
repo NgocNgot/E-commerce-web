@@ -8,8 +8,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
+            color: #0a0a0a;
         }
 
         .container {
@@ -23,11 +22,7 @@
 
         h1,
         h2 {
-            color: #007bff;
-        }
-
-        .subscription-info p {
-            margin: 5px 0;
+            color: #f43f5e;
         }
 
         .plan-details {
@@ -35,25 +30,23 @@
             padding: 15px;
             border: 1px solid #eee;
             border-radius: 3px;
-            background-color: #fff;
-        }
-
-        .plan-details p {
-            margin: 5px 0;
         }
 
         .confirm-button {
             display: inline-block;
-            margin-top: 20px;
             padding: 10px 20px;
-            background-color: #28a745;
-            color: white;
+            background-color: #f43f5e;
+            color: white !important;
+            font-weight: bold;
             text-decoration: none;
             border-radius: 5px;
         }
 
         .confirm-button:hover {
-            background-color: #218838;
+            background-color: #e11d48;
+        }
+        .confirm-content {
+            font-size: small;
         }
 
         .footer {
@@ -67,25 +60,32 @@
 
 <body>
     <div class="container">
-        <h1>Thank you for your order!</h1>
+        <h1>Thank you for your subscription!</h1>
         <p>Dear {{customerName}},</p>
-     
-        <h2>Order Details</h2>
-        {{orderItems}}
+
+        <h2>Subscription Information</h2>
         <div class="plan-details">
-            <p><strong>Subscription ID:</strong> {{subscriptionId}}</p>
-            <p><strong>Frequency:</strong> {{frequencyInterval}} {{frequencyType}}</p>
-            <p><strong>First Order Date:</strong> {{firstOrderDate}}</p>
-            <p><strong>Next Expected Order Date:</strong> {{nextOrderDate}}</p>
+            <p>Frequency: {{frequencyInterval}} {{frequencyType}}</p>
+            <p>First Order Date: {{firstOrderDate}}</p>
+            <p>Next Expected Order Date: {{nextOrderDate}}</p>
         </div>
 
-        <p>Please click the button below to confirm your subscription and activate your recurring order schedule:</p>
-        <p><a class="confirm-button" href="{{confirmationLink}}">Confirm Subscription</a></p>
-        
+        <h2>Order Details</h2>
+        {{orderItems}}
+        <p><strong>Shipping Cost:</strong> {{shippingCost}}</p>
+        <p><strong>Discount:</strong> {{discountAmount}}</p>
+        <p><strong>Total Amount:</strong> {{totalPrice}}</p>
+
         <h2>Shipping Information</h2>
-        <p><strong>Recipient Name:</strong> {{name}}</p>
-        <p><strong>Address:</strong> {{shippingAddress}}</p>
-        <p><strong>Phone Number:</strong> {{phoneNumber}}</p>
+        <div class="plan-details">
+            <p>Recipient Name: {{name}}</p>
+            <p>Address: {{shippingAddress}}</p>
+            <p>Phone Number: {{phoneNumber}}</p>
+        </div>
+        
+        <p><a class="confirm-button" href="{{confirmationLink}}">Confirm Subscription</a></p>
+        <p class="confirm-content" style="font-style: italic;">Please click the button below to confirm your subscription and activate your recurring order schedule.</p>
+        
 
         <div class="footer">
             <p>If you have any questions, please contact us.</p>

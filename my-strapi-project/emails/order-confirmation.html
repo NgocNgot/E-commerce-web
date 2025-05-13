@@ -4,12 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xác nhận đơn hàng #{{orderId}}</title>
+    <title>Order Confirmation #{{orderId}}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
+            color: #0a0a0a;
         }
 
         .container {
@@ -23,33 +22,15 @@
 
         h1,
         h2 {
-            color: #007bff;
+            color: #f43f5e;
         }
 
-        .order-info p {
-            margin: 5px 0;
-        }
-
-        .item-table {
-            width: 100%;
-            border-collapse: collapse;
+        .plan-details {
             margin-top: 20px;
-        }
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 3px;
 
-        .item-table th,
-        .item-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-
-        .item-table th {
-            background-color: #f2f2f2;
-        }
-
-        .total {
-            font-weight: bold;
-            margin-top: 15px;
         }
 
         .footer {
@@ -69,15 +50,16 @@
 
         <h2>Order Details</h2>
         {{orderItems}}
-        <p class="total"><strong>Shipping Cost:</strong> {{shippingCost}}</p>
-        <p class="total"><strong>Discount:</strong> {{discountAmount}}</p>
-        <p class="total"><strong>Total Amount:</strong> {{totalPrice}}</p>
+        <p><strong>Shipping Cost:</strong> {{shippingCost}}</p>
+        <p><strong>Discount:</strong> {{discountAmount}}</p>
+        <p><strong>Total Amount:</strong> {{totalPrice}}</p>
 
         <h2>Shipping Information</h2>
-        <p><strong>Recipient Name:</strong> {{name}}</p>
-        <p><strong>Address:</strong> {{shippingAddress}}</p>
-        <p><strong>Phone Number:</strong> {{phoneNumber}}</p>
-
+        <div class="plan-details">
+            <p>Recipient Name: {{name}}</p>
+            <p>Address: {{shippingAddress}}</p>
+            <p>Phone Number: {{phoneNumber}}</p>
+        </div>
         <div class="footer">
             <p>If you have any questions, please contact us.</p>
             <p>Sincerely,</p>
