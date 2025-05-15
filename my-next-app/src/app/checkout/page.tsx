@@ -58,7 +58,21 @@ function Checkout() {
         setSubscriptionFrequencyInterval(parseInt(e.target.value));
         console.log("subscriptionFrequencyInterval đã thay đổi thành:", parseInt(e.target.value));
     };
+
+
+    const [cities, setCities] = useState([]);
     useEffect(() => {
+        const fetchCities = async () => {
+            try {
+                const res = await fetch('https://provinces.open-api.vn/api/?depth=1');
+                const data = await res.json();
+                setCities(data);
+            } catch (err) {
+                console.error('Error fetching cities:', err);
+            }
+        };
+
+        fetchCities();
         const isSubscription = searchParams.get('isSubscription');
         if (isSubscription === 'true') {
             setShowSubscriptionOptions(true);
@@ -564,14 +578,19 @@ function Checkout() {
                                         value={userInfo.address}
                                         onChange={handleChange}
                                     />
-                                    <input
-                                        type="text"
+                                    <select
                                         name="city"
-                                        placeholder="City"
                                         className="w-full p-3 border rounded-xl"
                                         value={userInfo.city}
                                         onChange={handleChange}
-                                    />
+                                    >
+                                        <option value="">City</option>
+                                        {cities.map((city) => (
+                                            <option key={city.code} value={city.name}>
+                                                {city.name}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
 
