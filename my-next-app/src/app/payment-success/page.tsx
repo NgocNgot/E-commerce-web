@@ -1,10 +1,16 @@
 import React from 'react';
-// After payment success
+import Image from 'next/image';
+
 const PaymentSuccessPage = () => {
     return (
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-            <h1>🎉 Thanh toán thành công!</h1>
-            <p>Cảm ơn bạn đã mua hàng.</p>
+        <div className="relative w-full h-150 overflow-hidden">
+            <Image
+                src="http://localhost:1337/uploads/payment_success_3b5a3eb8bc.png"
+                alt="payment-success-img"
+                layout="fill"
+                objectFit="cover"
+                className="object-cover w-full h-full"
+            />
         </div>
     );
 };

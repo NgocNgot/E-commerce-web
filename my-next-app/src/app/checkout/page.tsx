@@ -328,7 +328,7 @@ function Checkout() {
             const orderId = orderData.data.id; // Get order id from response
             let initialOrderId = orderId - 1;
             let subscriptionCreated = false;
-            const confirmedAt = new Date().toISOString(); // Temporarily set confirmedAt to current time
+            const confirmedAt = new Date().toISOString();
 
             // Wait for a few seconds to ensure the order is fully created
             setTimeout(async () => {
@@ -387,8 +387,6 @@ function Checkout() {
                 );
 
                 const paymentData = await paymentResponse.json();
-                console.log("Payment response:", paymentData); // Log the entire payment response
-                console.log("Payment clientSecret:", paymentData.clientSecret); // Log the payment data
                 if (!paymentResponse.ok || !paymentData.clientSecret) {
                     alert("Failed to create payment intent!");
                     setLoading(false);
@@ -410,7 +408,6 @@ function Checkout() {
 
                         nextDate.setDate(firstOrderDayOfMonth + intervalInDays);
 
-                        // Handle cases where the calculated day exceeds the number of days in the month
                         const daysInNextMonth = getNumberOfDaysInMonth(nextDate.getFullYear(), nextDate.getMonth());
                         if (nextDate.getDate() > daysInNextMonth) {
                             nextDate.setDate(daysInNextMonth);
@@ -437,7 +434,7 @@ function Checkout() {
                                     frequencyType: subscriptionFrequencyType,
                                     frequencyInterval: subscriptionFrequencyInterval,
                                     statusSubscription: "Pending",
-                                    confirmedAt: new Date().toISOString(), // Temporarily set confirmedAt to current time
+                                    confirmedAt: new Date().toISOString(),
                                     nextOrderDate: nextOrderDate,
                                 },
                             }),

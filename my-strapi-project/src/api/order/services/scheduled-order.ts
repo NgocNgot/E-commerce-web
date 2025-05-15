@@ -45,7 +45,7 @@ export default ({ strapi }: { strapi: any }) => ({
 
         if (
           nextOrderDate <= now &&
-          ["Pending", "Active"].includes(subscription.statusSubscription)
+          subscription.statusSubscription === "Active"
         ) {
           const firstOrder = subscription.orders[0];
           const user = subscription.users_permissions_users[0];

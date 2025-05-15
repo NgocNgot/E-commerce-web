@@ -6,7 +6,39 @@ import path from "path";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2022-11-15",
 });
+function getNumberOfDaysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
 
+export function calculateNextOrderDate(
+  frequencyType,
+  frequencyInterval,
+  confirmedAt
+) {
+  let nextOrderDate = new Date(confirmedAt);
+
+  if (frequencyType === "Week") {
+    nextOrderDate.setDate(
+      nextOrderDate.getDate() + 7 / parseInt(frequencyInterval)
+    );
+  } else if (frequencyType === "Month") {
+    const intervalInDays = Math.round(
+      getNumberOfDaysInMonth(
+        confirmedAt.getFullYear(),
+        confirmedAt.getMonth()
+      ) * parseInt(frequencyInterval)
+    );
+    nextOrderDate.setDate(confirmedAt.getDate() + intervalInDays);
+    const daysInNextMonth = getNumberOfDaysInMonth(
+      nextOrderDate.getFullYear(),
+      nextOrderDate.getMonth()
+    );
+    if (nextOrderDate.getDate() > daysInNextMonth) {
+      nextOrderDate.setDate(daysInNextMonth);
+    }
+  }
+  return nextOrderDate.toISOString();
+}
 export default factories.createCoreController(
   "api::payment.payment",
   ({ strapi }) => ({
@@ -103,29 +135,12 @@ export default factories.createCoreController(
           subscriptionFrequencyInterval
         ) {
           const confirmedAt = new Date();
-          let nextOrderDate = new Date(confirmedAt);
+          const nextOrderDate = await calculateNextOrderDate(
+            subscriptionFrequencyType,
+            parseInt(subscriptionFrequencyInterval),
+            confirmedAt
+          );
 
-          if (subscriptionFrequencyType === "Week") {
-            nextOrderDate.setDate(
-              nextOrderDate.getDate() +
-                7 / parseInt(subscriptionFrequencyInterval)
-            );
-          } else if (subscriptionFrequencyType === "Month") {
-            const intervalInDays = Math.round(
-              getNumberOfDaysInMonth(
-                confirmedAt.getFullYear(),
-                confirmedAt.getMonth()
-              ) / parseInt(subscriptionFrequencyInterval)
-            );
-            nextOrderDate.setDate(confirmedAt.getDate() + intervalInDays);
-            const daysInNextMonth = getNumberOfDaysInMonth(
-              nextOrderDate.getFullYear(),
-              nextOrderDate.getMonth()
-            );
-            if (nextOrderDate.getDate() > daysInNextMonth) {
-              nextOrderDate.setDate(daysInNextMonth);
-            }
-          }
           subscriptionEntry = await strapi.entityService.create(
             "api::subscription.subscription",
             {
@@ -137,7 +152,7 @@ export default factories.createCoreController(
                 frequencyInterval: parseInt(subscriptionFrequencyInterval),
                 statusSubscription: "Pending",
                 confirmedAt: confirmedAt.toISOString(),
-                nextOrderDate: nextOrderDate.toISOString(),
+                nextOrderDate: nextOrderDate,
               },
             }
           );
@@ -220,15 +235,12 @@ export default factories.createCoreController(
               </tbody>
             </table>
           `;
-          console.log(
-            "--------isSubscriptionPayment nè",
-            isSubscriptionPayment
-          );
           if (isSubscriptionPayment) {
             const subscription = finalPayment.subscription;
             emailHTML = emailHTML
               .replace("{{customerName}}", customerName)
               .replace("{{orderItems}}", orderItemsHTML)
+              .replace("{{subscriptionId}}", subscription.id)
               .replace("{{frequencyType}}", subscription.frequencyType)
               .replace("{{frequencyInterval}}", subscription.frequencyInterval)
               .replace(
@@ -243,6 +255,10 @@ export default factories.createCoreController(
                 "{{confirmationLink}}",
                 `http://localhost:3000/confirm-subscription/${subscription.documentId}`
               )
+              .replace(
+                "{{cancelLink}}",
+                `http://localhost:3000/cancel-subscription/${subscription.documentId}`
+              )
               .replace("{{shippingCost}}", shippingCost.toFixed(2) + " USD")
               .replace("{{discountAmount}}", discountAmount.toFixed(2) + " USD")
               .replace("{{totalPrice}}", totalPrice.toFixed(2) + " USD")
@@ -253,7 +269,6 @@ export default factories.createCoreController(
               .replace("{{phoneNumber}}", orderData.phone)
               .replace("{{name}}", orderData.name);
           } else {
-            console.log("--------isSubscriptionPayment là false nè-------");
             emailHTML = emailHTML
               .replace("{{orderId}}", orderId)
               .replace("{{customerName}}", customerName)
@@ -309,7 +324,3 @@ export default factories.createCoreController(
     },
   })
 );
-
-function getNumberOfDaysInMonth(year, month) {
-  return new Date(year, month + 1, 0).getDate();
-}

@@ -45,6 +45,20 @@
         .confirm-button:hover {
             background-color: #e11d48;
         }
+        .cancel-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #ffc4cc;
+            color: #7e7c7c !important;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .cancel-button:hover {
+            color: #fff !important;
+            background-color: #e11d48;
+        }
         .confirm-content {
             font-size: small;
         }
@@ -82,11 +96,14 @@
             <p>Address: {{shippingAddress}}</p>
             <p>Phone Number: {{phoneNumber}}</p>
         </div>
+
+        <p>
+            <a class="confirm-button" href="{{confirmationLink}}">Confirm Subscription</a>
+            <a class="cancel-button" href="{{cancelLink}}">Cancel</a>
         
-        <p><a class="confirm-button" href="{{confirmationLink}}">Confirm Subscription</a></p>
+        </p>
         <p class="confirm-content" style="font-style: italic;">Please click the button below to confirm your subscription and activate your recurring order schedule.</p>
         
-
         <div class="footer">
             <p>If you have any questions, please contact us.</p>
             <p>Sincerely,</p>
