@@ -1,25 +1,28 @@
 "use client";
 
-const stripePromise = loadStripe("pk_test_51R91vrPbbfCp8zjVn18peJqrR2xvL2Q28PV39fa8QBqXui9u47abRheE0tWjEUff53ryeo3GBR25UyzCl1ZDSgX5007KhHxUn7");
+import { loadStripe } from "@stripe/stripe-js";
 import { use, useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import Navbar from "@/components/Navbar";
-import Image from "next/image";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTicketSimple } from '@fortawesome/free-solid-svg-icons';
-import { loadStripe } from "@stripe/stripe-js";
-import { CardElement, useStripe, useElements, Elements } from "@stripe/react-stripe-js";
+import { useStripe, useElements, Elements, CardElement } from "@stripe/react-stripe-js";
 import { User } from "@/../types/users";
 import { fetchUserById } from "../../api/users";
-import ShippingMethods from "@/app/checkout/ShippingMethods";
+import ShippingMethods from "@/app/checkout/ShippingMethods"; // Keep this as it is already a separate component
 import { LineItem } from "@/../types/shipping";
-import { removeFromCartApi } from '../../api/carts';
+
+import DeliveryInformation from "./DeliveryInformation";
+import SubscriptionOptions from "./SubscriptionOptions";
+import VoucherSection from "./VoucherSection";
+import OrderSummary from "./Order";
+import PaymentSection from "./PaymentSection";
+
+const stripePromise = loadStripe("pk_test_51R91vrPbbfCp8zjVn18peJqrR2xvL2Q28PV39fa8QBqXui9u47abRheE0tWjEUff53ryeo3GBR25UyzCl1ZDSgX5007KhHxUn7");
 
 function Checkout() {
     const searchParams = useSearchParams();
     const [showSubscriptionOptions, setShowSubscriptionOptions] = useState(false);
-    const [cart, setCart] = useState<any[]>([]); // Get cart
+    const [cart, setCart] = useState<any[]>([]);
     const [userInfo, setUserInfo] = useState({
         name: "",
         address: "",
@@ -44,7 +47,7 @@ function Checkout() {
     const [selectedVoucher, setSelectedVoucher] = useState<any | null>(null);
     const [discountAmount, setDiscountAmount] = useState<number>(0);
     const [appliedVoucherCodeDisplay, setAppliedVoucherCodeDisplay] = useState<string>("");
-    const [usedVoucher, setUsedVoucher] = useState<string | null>(null); // State to track used voucher
+    const [usedVoucher, setUsedVoucher] = useState<string | null>(null);
 
     // Subscription options
     const [subscriptionFrequencyType, setSubscriptionFrequencyType] = useState<string>("Week");
@@ -84,9 +87,8 @@ function Checkout() {
         const storedTotalPrice = JSON.parse(localStorage.getItem("cartTotalPrice") || "null");
         setCartTotalPrice(storedTotalPrice);
 
-        // Get userId from localStorage
         const storedUserId = localStorage.getItem('userId');
-        console.log("User ID from localStorage on Checkout load:", storedUserId); // Kiểm tra
+        console.log("User ID from localStorage on Checkout load:", storedUserId);
         if (storedUserId) {
             try {
                 const parsedUserId = JSON.parse(storedUserId);
@@ -99,12 +101,11 @@ function Checkout() {
         } else {
             alert("User ID not found. Please log in again.");
         }
-        // useEffect of voucher
         fetchAvailableVouchers(userId);
 
     }, [searchParams]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         if (e.target.type === "checkbox") {
             if (e.target.name === "saveInfo") {
                 setSaveInfo(e.target.checked);
@@ -130,11 +131,9 @@ function Checkout() {
     const handleVoucherInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setVoucherCode(e.target.value);
     };
-    // Handle apply voucher
     const handleApplyVoucher = () => {
         const voucherCodeToCompare = voucherCode.trim().toUpperCase();
 
-        // Check if the voucher has already been used in this session
         if (usedVoucher === voucherCodeToCompare) {
             alert("Voucher đã được sử dụng và không thể dùng lại.");
             setVoucherCode("");
@@ -146,7 +145,6 @@ function Checkout() {
         )?.promotion;
 
         if (matchedPromotion) {
-            // Check maximumUses
             if (matchedPromotion.maximumUses !== null && matchedPromotion.maximumUses > 0 && matchedPromotion.usageCount >= matchedPromotion.maximumUses) {
                 alert("This voucher code has expired!");
                 setSelectedVoucher(null);
@@ -155,7 +153,6 @@ function Checkout() {
                 setVoucherCode("");
                 return;
             }
-            // Check if the user is excludedUsers from the promotion
             const isExcludedUser = matchedPromotion.excludedUsers?.some(
                 (excludedUser: any) => excludedUser.id === userId
             );
@@ -238,7 +235,6 @@ function Checkout() {
         setDiscountAmount(calculatedDiscount);
     };
 
-    // Shipping methods
     const [selectedShippingMethodId, setSelectedShippingMethodId] = useState<
         number | null
     >(null);
@@ -258,7 +254,6 @@ function Checkout() {
         console.log("Selected Shipping Method:", methodId - 1, "Cost:", cost);
     };
 
-    // Handle payment
     const handlePayment = async () => {
         const token = localStorage.getItem("token");
 
@@ -275,16 +270,14 @@ function Checkout() {
                 setLoading(false);
                 return;
             }
-            // Get total price of cart
             const totalAmount =
-                (getTotal() + shippingCost - discountAmount) * 10; // Convert to cents
+                (getTotal() + shippingCost - discountAmount) * 10;
             if (totalAmount <= 0) {
                 alert("Cart is empty!");
                 setLoading(false);
                 return;
             }
 
-            // Order data
             const orderDataToSend = {
                 data: {
                     users_permissions_user: { id: userId },
@@ -295,7 +288,7 @@ function Checkout() {
                     phone: userInfo.phone,
                     email: userInfo.email,
                     statusCheckout: "Pending",
-                    shipping: { id: selectedShippingMethodId }, // Adjust ID if needed
+                    shipping: { id: selectedShippingMethodId },
                     shippingCost: shippingCost,
 
                     discountAmount: discountAmount,
@@ -306,7 +299,6 @@ function Checkout() {
                         quantity: item.quantity,
                         price: item.price,
                         title: item.title,
-                        // Shipping need
                         weight: item.weight,
                         length: item.length,
                         width: item.width,
@@ -318,7 +310,6 @@ function Checkout() {
                 },
             };
 
-            // Send cart data to the server to create an order
             const orderResponse = await fetch(
                 "http://localhost:1337/api/orders",
                 {
@@ -339,12 +330,11 @@ function Checkout() {
             }
 
             console.log("Order created:", orderData);
-            const orderId = orderData.data.id; // Get order id from response
+            const orderId = orderData.data.id;
             let initialOrderId = orderId - 1;
             let subscriptionCreated = false;
             const confirmedAt = new Date().toISOString();
 
-            // Wait for a few seconds to ensure the order is fully created
             setTimeout(async () => {
                 let paymentMethodId: string | null = null;
                 if (stripe && elements) {
@@ -374,7 +364,6 @@ function Checkout() {
 
                 const totalPriceInCents = Math.round(((cartTotalPrice || 0) + (typeof shippingCost === 'number' ? shippingCost : 0) - discountAmount) * 100);
 
-                // Create payment intent and link it with order
                 const paymentResponse = await fetch(
                     "http://localhost:1337/api/payments",
                     {
@@ -391,10 +380,10 @@ function Checkout() {
                                 order: { id: initialOrderId },
                                 paymentMethodId: paymentMethodId,
                                 email: userInfo.email,
-                                statusPayment: showSubscriptionOptions ? "Pending" : "Succeeded", // Set status for subscription
+                                statusPayment: showSubscriptionOptions ? "Pending" : "Succeeded",
                                 isSubscriptionPayment: showSubscriptionOptions,
-                                subscriptionFrequencyType: showSubscriptionOptions ? subscriptionFrequencyType : null, // Gửi kèm thông tin này
-                                subscriptionFrequencyInterval: showSubscriptionOptions ? subscriptionFrequencyInterval : null, // Gửi kèm thông tin này
+                                subscriptionFrequencyType: showSubscriptionOptions ? subscriptionFrequencyType : null,
+                                subscriptionFrequencyInterval: showSubscriptionOptions ? subscriptionFrequencyInterval : null,
                             },
                         }),
                     }
@@ -410,7 +399,6 @@ function Checkout() {
                 let nextOrderDate = null;
                 const confirmedDate = new Date(confirmedAt);
 
-                // Create Subscription if showSubscriptionOptions is true
                 if (showSubscriptionOptions && subscriptionFrequencyType && subscriptionFrequencyInterval) {
                     let nextDate = new Date(confirmedDate);
                     if (subscriptionFrequencyType === "Week") {
@@ -486,7 +474,6 @@ function Checkout() {
                     alert("Payment successful!");
                 }
 
-                // Update voucher usage count on Strapi
                 console.log("Attempting to update voucher usage count...");
                 if (appliedVoucherCodeDisplay && selectedVoucher?.promotion?.documentId) {
                     const updateVoucherResponse = await fetch(
@@ -511,7 +498,7 @@ function Checkout() {
                         console.log(`Voucher usage count updated successfully on the server. Status: ${updateVoucherResponse.status}`);
                     }
                 }
-            }, 3000); // Delay 3 seconds to ensure order is created
+            }, 3000);
         } catch (error) {
             console.error("Error processing payment:", error);
             alert("An error occurred. Please try again.");
@@ -539,137 +526,28 @@ function Checkout() {
                     <div className="flex flex-col md:flex-row">
                         {/* Left side */}
                         <section className="md:w-2/3 p-6 overflow-y-auto">
-                            {/* Information section */}
-                            <div className="mb-8">
-                                <h2 className="text-2xl font-bold mb-4">Delivery</h2>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    placeholder="Your name"
-                                    className="w-full p-3 border rounded-xl mb-4"
-                                    value={userInfo.name}
-                                    onChange={handleChange}
-                                />
-                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <input
-                                        type="text"
-                                        name="phone"
-                                        placeholder="Your phone number"
-                                        className="w-full p-3 border rounded-xl"
-                                        value={userInfo.phone}
-                                        onChange={handleChange}
-                                    />
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        placeholder="Your email"
-                                        className="w-full p-3 border rounded-xl"
-                                        value={userInfo.email}
-                                        onChange={handleChange}
-                                    />
-                                </div>
+                            <DeliveryInformation
+                                userInfo={userInfo}
+                                cities={cities}
+                                handleChange={handleChange}
+                            />
 
-                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <input
-                                        type="text"
-                                        name="address"
-                                        placeholder="Address"
-                                        className="w-full p-3 border rounded-xl"
-                                        value={userInfo.address}
-                                        onChange={handleChange}
-                                    />
-                                    <select
-                                        name="city"
-                                        className="w-full p-3 border rounded-xl"
-                                        value={userInfo.city}
-                                        onChange={handleChange}
-                                    >
-                                        <option value="">City</option>
-                                        {cities.map((city) => (
-                                            <option key={city.code} value={city.name}>
-                                                {city.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+                            <SubscriptionOptions
+                                showSubscriptionOptions={showSubscriptionOptions}
+                                subscriptionFrequencyType={subscriptionFrequencyType}
+                                subscriptionFrequencyInterval={subscriptionFrequencyInterval}
+                                handleFrequencyTypeChange={handleFrequencyTypeChange}
+                                handleFrequencyIntervalChange={handleFrequencyIntervalChange}
+                            />
 
-                            {/* Subscription section */}
-                            {showSubscriptionOptions && (
-                                <div className="mb-8">
-                                    <h2 className="text-2xl font-bold mb-4">Subscription Options</h2>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label htmlFor="frequencyType" className="block text-gray-700 text-sm font-bold mb-2">
-                                                Frequency:
-                                            </label>
-                                            <select
-                                                id="frequencyType"
-                                                name="frequencyType"
-                                                className="w-full p-3 border rounded-xl shadow-sm focus:ring sm:text-sm"
-                                                value={subscriptionFrequencyType}
-                                                onChange={handleFrequencyTypeChange}
-                                            >
-                                                <option value="Week">Weekly</option>
-                                                <option value="Month">Monthly</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label htmlFor="frequencyInterval" className="block text-gray-700 text-sm font-bold mb-2">
-                                                Interval:
-                                            </label>
-                                            <input
-                                                type="number"
-                                                id="frequencyInterval"
-                                                name="frequencyInterval"
-                                                className="w-full p-3 border rounded-xl shadow-sm focus:ring focus:ring-indigo-200 focus:border-indigo-500 sm:text-sm"
-                                                min="1"
-                                                value={subscriptionFrequencyInterval}
-                                                onChange={handleFrequencyIntervalChange}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            <VoucherSection
+                                voucherCode={voucherCode}
+                                selectedVoucher={selectedVoucher}
+                                handleVoucherInputChange={handleVoucherInputChange}
+                                handleApplyVoucher={handleApplyVoucher}
+                                formatCurrency={formatCurrency}
+                            />
 
-                            {/* Voucher section*/}
-                            <div className="mb-8">
-                                <h2 className="text-2xl font-bold mb-4 flex items-center relative">
-                                    Voucher
-                                    {selectedVoucher && (
-                                        <div className="relative ml-4 flex items-center justify-center w-6 h-6 text-white font-semibold text-xs">
-                                            <FontAwesomeIcon
-                                                icon={faTicketSimple}
-                                                size="2x"
-                                                color="oklch(64.5% 0.246 16.439)"
-                                                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                                            />
-                                            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-semibold text-white">
-                                                {selectedVoucher?.discountType === "percentage" && `-${selectedVoucher.percentage}%`}
-                                                {selectedVoucher?.discountType === "fixedAmount" && `-${formatCurrency(selectedVoucher.discountValue)}`}
-                                            </span>
-                                        </div>
-                                    )}
-                                </h2>
-                                <div className="mb-4 flex">
-                                    <input
-                                        type="text"
-                                        id="voucherCode"
-                                        className="w-full p-3 border rounded-xl"
-                                        value={voucherCode}
-                                        onChange={handleVoucherInputChange}
-                                    />
-                                    <button
-                                        onClick={handleApplyVoucher}
-                                        className="bg-rose-400 hover:bg-rose-500 text-white font-bold py-2 px-4 rounded-full w-40 ml-2"
-                                    >
-                                        APPLY
-                                    </button>
-
-                                </div>
-                            </div>
-
-                            {/* Shipping method */}
                             <div className="mb-8">
                                 <ShippingMethods
                                     lineItems={lineItemsForShipping}
@@ -678,117 +556,23 @@ function Checkout() {
                                 />
                             </div>
 
-                            {/* Payment section */}
-                            <div className="mb-8">
-                                <h2 className="text-2xl font-bold mb-4">Payment</h2>
-                                <div className="border rounded-xl mb-4">
-                                    <div className="p-3 flex justify-between items-center rounded-xl bg-rose-100">
-                                        <span className="font-medium ">Credit card</span>
-                                    </div>
-                                    <div className="p-4 space-y-4">
-                                        {/* Card Number */}
-                                        <div className="h-10 bg-gray-200 rounded-xl">
-                                            <CardElement
-                                                className="border p-3 rounded-md"
-                                                options={{ hidePostalCode: true }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <PaymentSection />
+
                         </section>
 
                         {/* Right side */}
-                        <aside className="md:w-1/3 pt-24 pr-20 bg-gray-100 p-6 md:fixed md:top-0 md:right-0 md:bottom-0 md:overflow-y-auto">
-                            <div className="max-w-md mx-auto h-full flex flex-col">
-                                <div className="flex-grow">
-                                    <div className="mb-6 space-y-4">
-                                        {cart.map((item) => (
-                                            <div key={item.id} className="flex items-center">
-                                                <div className="relative mr-4">
-                                                    <div className="w-16 h-16 rounded-md flex items-center justify-center overflow-hidden">
-                                                        <Image
-                                                            src={item.image || "/placeholder.jpg"}
-                                                            alt={item.title || "No Title"}
-                                                            width={64}
-                                                            height={64}
-                                                            className="w-16 h-16 object-cover"
-                                                        />
-                                                        <div className="absolute -top-2 -right-2 bg-rose-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
-                                                            {item.quantity}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex-grow">
-                                                    <p>{item.title}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    {formatCurrency(item.totalItemPrice)}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                        <OrderSummary
+                            cart={cart}
+                            cartTotalPrice={cartTotalPrice}
+                            selectedVoucher={selectedVoucher}
+                            shippingCost={shippingCost}
+                            discountAmount={discountAmount}
+                            formatCurrency={formatCurrency}
+                            handlePayment={handlePayment}
+                            loading={loading}
+                            stripe={stripe}
+                        />
 
-                                    <div className="border-t border-gray-300 pt-4 space-y-2">
-                                        <div className="flex justify-between">
-                                            <span>Subtotal · {cart.length} items</span>
-                                            <span>{formatCurrency(cartTotalPrice)}</span>
-                                        </div>
-                                        {/* Add discount cost */}
-                                        {selectedVoucher && (
-                                            <div className="flex justify-between">
-                                                <span>
-                                                    Voucher · {selectedVoucher?.promotion?.code}
-                                                </span>
-                                                <span className="font-medium text-sm text-rose-500">-
-                                                    {selectedVoucher?.discountType === "fixedAmount" &&
-                                                        typeof selectedVoucher?.discountValue === "number"
-                                                        ? formatCurrency(selectedVoucher.discountValue)
-                                                        : selectedVoucher?.discountType === "percentage" &&
-                                                            typeof selectedVoucher?.percentage === "number" ? formatCurrency(
-                                                                ((cartTotalPrice || 0) * selectedVoucher.percentage) / 100
-                                                            )
-                                                            : "-"}
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {/* Shipping cost */}
-                                        <div className="flex justify-between">
-                                            <span>Shipping</span>
-                                            <span className="font-medium text-sm text-rose-500">
-                                                {shippingCost > 0
-                                                    ? formatCurrency(shippingCost)
-                                                    : "FREE"}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Total */}
-                                    <div className="border-t border-gray-300 mt-4 pt-4 flex justify-between items-center">
-                                        <span className="text-lg font-medium">Total</span>
-                                        <div className="text-2xl font-bold text-rose-500">
-                                            {formatCurrency(
-                                                (cartTotalPrice || 0) + shippingCost - discountAmount
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                {/* Button Pay now */}
-                                <div className="mb-8">
-                                    <button
-                                        onClick={handlePayment}
-                                        disabled={!stripe || loading}
-                                        className={`w-full py-4 rounded-full text-center font-bold text-white ${loading
-                                            ? "bg-rose-400"
-                                            : "bg-rose-400 hover:bg-rose-500"
-                                            }`}
-                                    >
-                                        {loading ? "Processing..." : "PAY NOW"}
-                                    </button>
-                                </div>
-                            </div>
-                        </aside>
                     </div>
                 </div>
             </div>
